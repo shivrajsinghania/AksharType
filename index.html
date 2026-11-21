@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AksharType — Hindi (मंगल &amp; कृति देव) &amp; English Typing Practice</title>
+    <meta
+      name="description"
+      content="A lightweight, 100% client-side dark-themed typing practice web app for English and Hindi (Mangal and Kruti Dev 010)."
+    />
+    <meta property="og:title" content="AksharType — Hindi &amp; English Typing Practice" />
+    <meta
+      property="og:description"
+      content="Practice English, Hindi Mangal, and Kruti Dev 010 with real-time WPM, accuracy tracking, and full-screen focus mode."
+    />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/css/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <!-- Top Navigation Bar (Strict 3-Zone Contract; hidden automatically while typing) -->
+      <header class="top-bar" id="top-bar">
+        <a href="#practice" class="brand-wordmark" id="brand-home" aria-label="AksharType Home">
+          AksharType
+        </a>
+
+        <nav class="top-nav" aria-label="Primary Navigation">
+          <button type="button" class="nav-link is-active" data-view="practice">Practice</button>
+          <button type="button" class="nav-link" data-view="passages">Passages</button>
+          <button type="button" class="nav-link" data-view="history">History</button>
+          <button type="button" class="nav-link" id="nav-keymap-toggle" aria-pressed="false">
+            Keymap
+          </button>
+        </nav>
+
+        <div class="top-actions">
+          <button type="button" class="btn-primary" id="open-custom-text-btn">Custom Text</button>
+        </div>
+      </header>
+
+      <!-- Main Workspace -->
+      <main class="main-container">
+        <!-- ===================== VIEW 1: PRACTICE ===================== -->
+        <section id="view-practice" class="view-section is-active" aria-label="Typing Practice">
+          <!-- Workspace Configuration Bar (hidden automatically while typing) -->
+          <div class="config-bar" id="config-bar" role="toolbar" aria-label="Practice Configuration">
+            <!-- Script & Layout Selector -->
+            <div class="config-group" role="group" aria-label="Typing Mode">
+              <div class="segmented-control" id="layout-selector">
+                <button type="button" class="seg-btn is-active" data-layout="english">English</button>
+                <button type="button" class="seg-btn seg-btn-hindi" data-layout="mangal">मंगल (Mangal)</button>
+                <button type="button" class="seg-btn seg-btn-hindi" data-layout="kruti-dev">कृति देव (Kruti Dev)</button>
+              </div>
+            </div>
+
+            <div class="config-divider" aria-hidden="true"></div>
+
+            <!-- Mode Selector: Time vs Pages -->
+            <div class="config-group" role="group" aria-label="Test Duration or Length">
+              <div class="segmented-control" id="mode-type-selector">
+                <button type="button" class="seg-btn is-active" data-mode="time">Time</button>
+                <button type="button" class="seg-btn" data-mode="pages">Pages</button>
+              </div>
+
+              <!-- Time Options -->
+              <div class="segmented-control" id="time-options">
+                <button type="button" class="seg-btn is-active" data-minutes="3">3m</button>
+                <button type="button" class="seg-btn" data-minutes="5">5m</button>
+                <button type="button" class="seg-btn" data-minutes="custom" id="custom-time-btn">Custom</button>
+              </div>
+
+              <!-- Inline Custom Minute Input -->
+              <div class="custom-minute-wrap is-hidden" id="custom-minute-wrap">
+                <input
+                  type="number"
+                  id="custom-minute-input"
+                  class="mini-input"
+                  min="1"
+                  max="60"
+                  value="10"
+                  aria-label="Custom minutes"
+                />
+                <span class="mini-unit">min</span>
+              </div>
+
+              <!-- Page Options -->
+              <div class="segmented-control is-hidden" id="page-options">
+                <button type="button" class="seg-btn is-active" data-pages="1">1 Page</button>
+                <button type="button" class="seg-btn" data-pages="2">2 Pages</button>
+                <button type="button" class="seg-btn" data-pages="3">3 Pages</button>
+              </div>
+            </div>
+
+            <div class="config-divider" aria-hidden="true"></div>
+
+            <!-- Sound Controls -->
+            <div class="config-group config-group-right">
+              <div class="segmented-control" id="sound-selector" role="group" aria-label="Typing Sound">
+                <button type="button" class="seg-btn is-active" data-sound="mechanical">Mech</button>
+                <button type="button" class="seg-btn" data-sound="soft">Soft</button>
+                <button type="button" class="seg-btn" data-sound="off">Off</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Typing Area -->
+          <div id="typing-panel" class="typing-panel">
+            <!-- Quiet Passage Meta + Live Telemetry Strip -->
+            <div class="telemetry-strip">
+              <div class="passage-meta" id="passage-meta">
+                <span id="meta-passage-title">The Craft of Precision Software</span>
+                <span class="meta-sep" aria-hidden="true">&middot;</span>
+                <span id="meta-layout-label">English</span>
+                <span class="meta-sep" aria-hidden="true">&middot;</span>
+                <span id="meta-lock-label" class="lock-notice">No-backspace mode</span>
+              </div>
+
+              <div class="live-metrics" aria-live="polite">
+                <div class="metric-item">
+                  <span class="metric-label">WPM</span>
+                  <span class="metric-value tabular-nums" id="live-wpm">0</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Accuracy</span>
+                  <span class="metric-value tabular-nums" id="live-accuracy">100%</span>
+                </div>
+                <div class="metric-item">
+                  <span class="metric-label">Mistakes</span>
+                  <span class="metric-value metric-value-error tabular-nums" id="live-mistakes">0</span>
+                </div>
+                <div class="metric-item metric-item-primary">
+                  <span class="metric-label" id="live-progress-label">Time Left</span>
+                  <span class="metric-value tabular-nums" id="live-progress">03:00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Thin Linear Progress Bar -->
+            <div class="progress-track" aria-hidden="true">
+              <div class="progress-fill" id="progress-fill"></div>
+            </div>
+
+            <!-- Inline Real-Time Typing Stage -->
+            <div
+              class="typing-stage"
+              id="typing-stage"
+              tabindex="0"
+              role="application"
+              aria-label="Typing test area. Begin typing to start."
+            >
+              <!-- Hidden textarea for native Hindi IME composition support -->
+              <textarea
+                id="ime-capture"
+                class="ime-capture"
+                autocomplete="off"
+                autocorrect="off"
+                autocapitalize="off"
+                spellcheck="false"
+                aria-hidden="true"
+                tabindex="-1"
+              ></textarea>
+
+              <div class="stream-viewport" id="stream-viewport">
+                <div class="stream-caret" id="stream-caret" aria-hidden="true"></div>
+                <div class="stream-content" id="stream-content"></div>
+              </div>
+
+              <!-- Subtle Focus Overlay (only shown if window blurs mid-test) -->
+              <div class="focus-scrim is-hidden" id="focus-scrim">
+                <span class="focus-scrim-text">Click here or press any key to resume typing</span>
+              </div>
+            </div>
+
+            <!-- Minimal Focus-Mode Footer (only visible while actively typing) -->
+            <div class="focus-footer" id="focus-footer">
+              <span id="focus-next-key"></span>
+              <div class="focus-footer-controls">
+                <button type="button" class="focus-quiet-btn" id="btn-exit-focus">
+                  Exit Focus <kbd class="kbd-hint">Esc</kbd>
+                </button>
+                <button type="button" class="focus-quiet-btn" id="btn-focus-restart">
+                  Restart <kbd class="kbd-hint">Tab</kbd>
+                </button>
+              </div>
+            </div>
+
+            <!-- Idle Stage Footer (hidden while typing) -->
+            <div class="stage-footer" id="stage-footer">
+              <div class="stage-hint" id="stage-hint">
+                <span>Start typing to enter focus mode</span>
+                <span class="meta-sep" aria-hidden="true">&middot;</span>
+                <span id="next-key-readout">Next key: Space</span>
+              </div>
+
+              <div class="stage-actions">
+                <button type="button" class="btn-ghost" id="btn-next-passage">Next Passage</button>
+                <button type="button" class="btn-secondary" id="btn-restart" title="Restart current session (Tab)">
+                  Restart <kbd class="kbd-hint">Tab</kbd>
+                </button>
+              </div>
+            </div>
+
+            <!-- Toggleable On-Screen Keyboard Keymap Guide -->
+            <div class="keymap-drawer is-hidden" id="keymap-drawer" aria-label="On-screen keyboard layout guide">
+              <div class="keymap-header">
+                <div class="keymap-meta">
+                  <span class="keymap-title" id="keymap-title">English Keymap</span>
+                  <span class="meta-sep" aria-hidden="true">&middot;</span>
+                  <span class="keymap-legend-note">Top: Shift &middot; Bottom: Normal</span>
+                </div>
+                <button type="button" class="btn-ghost btn-sm" id="close-keymap-btn">Hide Keymap</button>
+              </div>
+              <div class="keyboard-grid" id="keyboard-grid"></div>
+            </div>
+          </div>
+
+          <!-- Post-Test Results Panel -->
+          <div id="results-panel" class="results-panel is-hidden" aria-live="polite">
+            <div class="results-header">
+              <div>
+                <h1 class="results-title">Session Complete</h1>
+                <div class="results-subtitle" id="results-subtitle">
+                  <span>मंगल</span>
+                  <span class="meta-sep" aria-hidden="true">&middot;</span>
+                  <span>3 min</span>
+                  <span class="meta-sep" aria-hidden="true">&middot;</span>
+                  <span>Passage Title</span>
+                </div>
+              </div>
+              <div class="pb-callout is-hidden" id="results-pb-callout">New Personal Best</div>
+            </div>
+
+            <!-- 4-Column Flat KPI Grid -->
+            <div class="results-kpi-grid">
+              <div class="kpi-cell">
+                <span class="kpi-label">Net WPM</span>
+                <span class="kpi-value kpi-value-hero tabular-nums" id="res-net-wpm">0</span>
+                <span class="kpi-sub tabular-nums" id="res-raw-wpm">Raw 0 WPM</span>
+              </div>
+              <div class="kpi-cell">
+                <span class="kpi-label">Accuracy</span>
+                <span class="kpi-value tabular-nums" id="res-accuracy">0%</span>
+                <span class="kpi-sub" id="res-acc-status">Zero-correction run</span>
+              </div>
+              <div class="kpi-cell">
+                <span class="kpi-label">Characters</span>
+                <span class="kpi-value tabular-nums" id="res-chars-total">0</span>
+                <span class="kpi-sub tabular-nums" id="res-chars-breakdown">0 correct &middot; 0 mistakes</span>
+              </div>
+              <div class="kpi-cell">
+                <span class="kpi-label">Duration</span>
+                <span class="kpi-value tabular-nums" id="res-duration">00:00</span>
+                <span class="kpi-sub tabular-nums" id="res-consistency">Consistency 0%</span>
+              </div>
+            </div>
+
+            <!-- Interactive WPM & Errors Speed Chart -->
+            <div class="chart-card">
+              <div class="chart-header">
+                <span class="chart-title">Speed &amp; Mistake Timeline</span>
+                <div class="chart-legend">
+                  <span class="legend-item"><span class="legend-swatch swatch-net"></span>Net WPM</span>
+                  <span class="legend-item"><span class="legend-swatch swatch-raw"></span>Raw WPM</span>
+                  <span class="legend-item"><span class="legend-swatch swatch-err"></span>Mistakes</span>
+                </div>
+              </div>
+              <div class="chart-container" id="results-chart-container">
+                <canvas id="results-chart" aria-label="WPM speed over time chart"></canvas>
+                <div class="chart-tooltip is-hidden" id="chart-tooltip"></div>
+              </div>
+            </div>
+
+            <div class="results-actions">
+              <button type="button" class="btn-primary" id="res-retry-btn">Practice Again</button>
+              <button type="button" class="btn-secondary" id="res-next-btn">Next Passage</button>
+              <button type="button" class="btn-ghost" id="res-history-btn">View History</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===================== VIEW 2: PASSAGES ===================== -->
+        <section id="view-passages" class="view-section" aria-label="Curated Passages">
+          <div class="section-header">
+            <div>
+              <h1 class="section-title">Practice Passages</h1>
+              <p class="section-desc">
+                Select a curated English or Hindi passage, or paste your own text.
+              </p>
+            </div>
+            <div class="segmented-control" id="passage-filter">
+              <button type="button" class="seg-btn is-active" data-lang-filter="all">All</button>
+              <button type="button" class="seg-btn" data-lang-filter="english">English</button>
+              <button type="button" class="seg-btn seg-btn-hindi" data-lang-filter="hindi">हिन्दी (मंगल / कृति देव)</button>
+            </div>
+          </div>
+
+          <div class="passages-grid" id="passages-grid"></div>
+        </section>
+
+        <!-- ===================== VIEW 3: HISTORY ===================== -->
+        <section id="view-history" class="view-section" aria-label="Typing History and Personal Bests">
+          <div class="section-header">
+            <div>
+              <h1 class="section-title">History &amp; Personal Bests</h1>
+              <p class="section-desc">
+                All results are stored locally in your browser.
+              </p>
+            </div>
+            <div class="history-controls">
+              <div class="segmented-control" id="history-filter">
+                <button type="button" class="seg-btn is-active" data-history-layout="all">All</button>
+                <button type="button" class="seg-btn" data-history-layout="english">English</button>
+                <button type="button" class="seg-btn seg-btn-hindi" data-history-layout="mangal">मंगल</button>
+                <button type="button" class="seg-btn seg-btn-hindi" data-history-layout="kruti-dev">कृति देव</button>
+              </div>
+              <button type="button" class="btn-ghost btn-danger-text" id="clear-history-btn">Clear History</button>
+            </div>
+          </div>
+
+          <!-- Personal Bests Strip -->
+          <div class="pb-grid" id="pb-grid"></div>
+
+          <!-- Session Log Table -->
+          <div class="table-wrap" id="history-table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Layout</th>
+                  <th>Mode</th>
+                  <th>Passage</th>
+                  <th class="num-col">Net WPM</th>
+                  <th class="num-col">Accuracy</th>
+                  <th class="num-col">Mistakes</th>
+                  <th class="action-col"></th>
+                </tr>
+              </thead>
+              <tbody id="history-tbody"></tbody>
+            </table>
+          </div>
+
+          <!-- Empty History State -->
+          <div class="empty-state is-hidden" id="history-empty">
+            <p class="empty-title">No completed sessions yet</p>
+            <p class="empty-desc">
+              Finish a timed or page-based typing run to record your WPM, accuracy, and personal bests.
+            </p>
+            <button type="button" class="btn-primary" id="empty-start-btn">Start Practicing</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- ===================== CUSTOM TEXT MODAL ===================== -->
+    <div class="modal-backdrop is-hidden" id="custom-text-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modal-title">Custom Practice Text</h2>
+          <button type="button" class="btn-ghost btn-sm" id="close-modal-btn" aria-label="Close modal">Close</button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-field-row">
+            <label for="custom-text-title" class="field-label">Passage Title</label>
+            <input
+              type="text"
+              id="custom-text-title"
+              class="text-input"
+              placeholder="e.g. Court Dictation Drill #4"
+              maxlength="80"
+            />
+          </div>
+
+          <div class="modal-field-row">
+            <div class="field-label-row">
+              <label for="custom-text-area" class="field-label">Paste English or Hindi Text</label>
+              <span class="field-meta tabular-nums" id="custom-text-stats">0 words &middot; 0 chars</span>
+            </div>
+            <textarea
+              id="custom-text-area"
+              class="text-area"
+              rows="8"
+              placeholder="Paste any English or Hindi Devanagari passage here..."
+            ></textarea>
+            <p class="field-error is-hidden" id="custom-text-error">Please enter at least 15 characters to start practicing.</p>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn-ghost" id="cancel-modal-btn">Cancel</button>
+          <button type="button" class="btn-primary" id="apply-custom-text-btn">Load &amp; Practice</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="/js/app.js"></script>
+  </body>
+</html>
