@@ -3,7 +3,7 @@
  * Isolates preferences, session history, and per-key hit/miss telemetry per account (or guest).
  */
 
-import { getActiveVaultKey } from './auth.js';
+import { getActiveVaultKey, idbSet } from './auth.js';
 
 const LEGACY_PREFS_KEY = 'akshartype_prefs_v1';
 const LEGACY_HISTORY_KEY = 'akshartype_history_v1';
@@ -12,6 +12,7 @@ const MAX_HISTORY_ITEMS = 250;
 
 export const DEFAULT_PREFS = {
   layout: 'english', // 'english' | 'mangal' | 'kruti-dev'
+  textMode: 'standard', // 'standard' (Capitals, Numbers & Symbols) | 'easy' (small letters only)
   testMode: 'time', // 'time' | 'pages'
   durationMinutes: 3,
   isCustomTime: false,
@@ -66,7 +67,9 @@ function migrateLegacyGuestIfNeeded() {
         }));
       }
     }
-    localStorage.setItem(GUEST_VAULT_KEY, JSON.stringify(vault));
+    const serialized = JSON.stringify(vault);
+    localStorage.setItem(GUEST_VAULT_KEY, serialized);
+    idbSet(GUEST_VAULT_KEY, serialized);
   } catch {
     // Ignore malformed legacy state
   }
@@ -82,6 +85,7 @@ function readVaultByKey(key) {
     if (parsed && typeof parsed === 'object') {
       vault.prefs = { ...DEFAULT_PREFS, ...(parsed.prefs || {}) };
       vault.prefs.layout = normalizeLayoutId(vault.prefs.layout);
+      vault.prefs.textMode = vault.prefs.textMode === 'easy' ? 'easy' : 'standard';
       if (Array.isArray(parsed.sessions)) {
         vault.sessions = parsed.sessions.map((item) => ({
           ...item,
@@ -104,7 +108,9 @@ function readVaultByKey(key) {
 
 function writeVaultByKey(key, vault) {
   try {
-    localStorage.setItem(key, JSON.stringify(vault));
+    const serialized = JSON.stringify(vault);
+    localStorage.setItem(key, serialized);
+    idbSet(key, serialized);
   } catch {
     // Ignore storage quota errors gracefully
   }

@@ -84,10 +84,16 @@ export function computeDashboardMetrics(allSessions, layoutFilter = 'all') {
 
   // True keystroke-weighted mathematical Overall Accuracy across all tests:
   // sum(correctKeystrokes) / sum(totalKeystrokes) * 100
-  const weightedAccuracy =
-    totalKeystrokes > 0
-      ? Number(((totalCorrectKeystrokes / totalKeystrokes) * 100).toFixed(1))
-      : 0;
+  // Never falsely rounds to 100% when any mistake exists.
+  let weightedAccuracy = 0;
+  if (totalKeystrokes > 0) {
+    if (totalCorrectKeystrokes >= totalKeystrokes) {
+      weightedAccuracy = 100;
+    } else {
+      const exact = (totalCorrectKeystrokes / totalKeystrokes) * 100;
+      weightedAccuracy = Math.min(99.9, Number(exact.toFixed(1)));
+    }
+  }
 
   // Recent 5 tests weighted WPM vs All-Time comparison delta
   let recentDeltaWpm = null;

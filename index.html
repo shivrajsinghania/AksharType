@@ -20,6 +20,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="AksharType" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -35,7 +36,8 @@
       <!-- Top Navigation Bar (Strict 3-Zone Contract; hides automatically while typing) -->
       <header class="top-bar" id="top-bar">
         <a href="#practice" class="brand-wordmark" id="brand-home" aria-label="AksharType Home">
-          AksharType
+          <img src="/logo-64.png" alt="" class="brand-logo" width="26" height="26" />
+          <span>AksharType</span>
         </a>
 
         <nav class="top-nav" aria-label="Primary Navigation">
@@ -69,6 +71,29 @@
                 <button type="button" class="seg-btn is-active" data-layout="english">English</button>
                 <button type="button" class="seg-btn seg-btn-hindi" data-layout="mangal">मंगल (Mangal)</button>
                 <button type="button" class="seg-btn seg-btn-hindi" data-layout="kruti-dev">कृति देव (Kruti Dev)</button>
+              </div>
+              <div
+                class="segmented-control"
+                id="text-mode-selector"
+                role="group"
+                aria-label="Text Difficulty"
+              >
+                <button
+                  type="button"
+                  class="seg-btn is-active"
+                  data-text-mode="standard"
+                  title="Capitals, numbers, and symbols"
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  class="seg-btn"
+                  data-text-mode="easy"
+                  title="Small letters only"
+                >
+                  Easy
+                </button>
               </div>
             </div>
 

@@ -13,6 +13,7 @@ import {
   signIn,
   signOut,
   getUserInitials,
+  hydratePersistentAuthAndStorage,
 } from './auth.js';
 import {
   loadPrefs,
@@ -55,6 +56,7 @@ const dom = {
 
   // Config Bar
   layoutSelector: document.getElementById('layout-selector'),
+  textModeSelector: document.getElementById('text-mode-selector'),
   modeTypeSelector: document.getElementById('mode-type-selector'),
   timeOptions: document.getElementById('time-options'),
   customMinuteWrap: document.getElementById('custom-minute-wrap'),
@@ -270,22 +272,47 @@ function getEffectiveDurationMinutes() {
   return prefs.durationMinutes === 5 ? 5 : 3;
 }
 
+function nowHighRes() {
+  return typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+}
+
 function getElapsedMs() {
   if (state.status === 'running' && state.startTimeMs) {
-    return state.accumulatedMs + (Date.now() - state.startTimeMs);
+    return state.accumulatedMs + Math.max(0, nowHighRes() - state.startTimeMs);
   }
   return state.accumulatedMs;
 }
 
-function computeCurrentMetrics() {
-  const elapsedMs = getElapsedMs();
-  if (elapsedMs <= 0 || state.totalKeystrokes === 0) {
+/**
+ * Real-world standard WPM & Accuracy calculation:
+ * - 1 standard word = 5 keystrokes
+ * - Raw WPM = (totalKeystrokes / 5) / elapsedMinutes
+ * - Net WPM = (correctKeystrokes / 5) / elapsedMinutes
+ * - Accuracy = (correctKeystrokes / totalKeystrokes) * 100
+ *   (100% ONLY when zero mistakes; otherwise exact to 1 decimal, capped at 99.9%)
+ */
+function computeCurrentMetrics(overrideElapsedMs = null) {
+  const rawElapsedMs = overrideElapsedMs !== null ? overrideElapsedMs : getElapsedMs();
+  if (state.totalKeystrokes === 0) {
     return { netWpm: 0, rawWpm: 0, accuracy: 100 };
   }
-  const minutes = Math.max(1000, elapsedMs) / 60000;
+
+  let accuracy;
+  if (state.correctKeystrokes >= state.totalKeystrokes && state.errorTokens === 0) {
+    accuracy = 100;
+  } else {
+    const exactAcc = (state.correctKeystrokes / state.totalKeystrokes) * 100;
+    accuracy = Math.min(99.9, Number(exactAcc.toFixed(1)));
+  }
+
+  // Avoid artificial WPM spikes on the very first keystroke (t < 250ms)
+  if (rawElapsedMs < 250 && state.totalKeystrokes <= 1) {
+    return { netWpm: 0, rawWpm: 0, accuracy };
+  }
+
+  const minutes = Math.max(500, rawElapsedMs) / 60000;
   const netWpm = Math.round(state.correctKeystrokes / 5 / minutes);
   const rawWpm = Math.round(state.totalKeystrokes / 5 / minutes);
-  const accuracy = Math.round((state.correctKeystrokes / state.totalKeystrokes) * 100);
   return { netWpm, rawWpm, accuracy };
 }
 
@@ -467,6 +494,7 @@ function syncConfigUI() {
   const layout = LAYOUTS[prefs.layout] || LAYOUTS.english;
 
   setSegmentedActive(dom.layoutSelector, 'layout', prefs.layout);
+  setSegmentedActive(dom.textModeSelector, 'textMode', prefs.textMode || 'standard');
   setSegmentedActive(dom.modeTypeSelector, 'mode', prefs.testMode);
   setSegmentedActive(dom.soundSelector, 'sound', prefs.soundProfile);
 
@@ -487,7 +515,8 @@ function syncConfigUI() {
   }
 
   dom.typingStage.classList.toggle('is-hindi', layout.isHindi);
-  dom.metaLayoutLabel.textContent = layout.name;
+  const modeSuffix = prefs.textMode === 'easy' ? ' · Easy' : '';
+  dom.metaLayoutLabel.textContent = `${layout.name}${modeSuffix}`;
 
   soundEngine.setProfile(prefs.soundProfile);
 
@@ -526,7 +555,8 @@ function resetSession() {
     state.currentPassage,
     prefs.testMode,
     getEffectiveDurationMinutes(),
-    prefs.pageCount
+    prefs.pageCount,
+    prefs.textMode || 'standard'
   );
 
   state.status = 'idle';
@@ -554,7 +584,8 @@ function resetSession() {
   dom.metaLockLabel.classList.remove('is-nudged');
 
   dom.metaPassageTitle.textContent = state.currentPassage.title;
-  dom.metaLayoutLabel.textContent = layout.name;
+  const modeSuffix = prefs.textMode === 'easy' && !state.currentPassage.isCustom ? ' · Easy' : '';
+  dom.metaLayoutLabel.textContent = `${layout.name}${modeSuffix}`;
 
   renderTokenStream();
   updateTelemetryUI();
@@ -734,32 +765,39 @@ function updateTelemetryUI() {
 function startOrResumeSession() {
   if (state.status === 'running') return;
   state.status = 'running';
-  state.startTimeMs = Date.now();
+  state.startTimeMs = nowHighRes();
   enterFocusMode();
 
   stopTimer();
   state.timerId = window.setInterval(() => {
     if (state.status !== 'running') return;
-    state.elapsedSec += 1;
 
-    const { netWpm, rawWpm } = computeCurrentMetrics();
-    state.wpmTimeline.push({
-      second: state.elapsedSec,
-      netWpm,
-      rawWpm,
-      errors: state.intervalErrors,
-    });
-    state.intervalErrors = 0;
+    const elapsedMs = getElapsedMs();
+    const wholeSec = Math.floor(elapsedMs / 1000);
+
+    // Record exact 1-second timeline samples without drift
+    while (state.elapsedSec < wholeSec) {
+      state.elapsedSec += 1;
+      const sampleMs = state.elapsedSec * 1000;
+      const { netWpm, rawWpm } = computeCurrentMetrics(sampleMs);
+      state.wpmTimeline.push({
+        second: state.elapsedSec,
+        netWpm,
+        rawWpm,
+        errors: state.intervalErrors,
+      });
+      state.intervalErrors = 0;
+    }
 
     updateTelemetryUI();
 
     if (prefs.testMode === 'time') {
       const targetSec = getEffectiveDurationMinutes() * 60;
-      if (state.elapsedSec >= targetSec) {
-        finishSession();
+      if (elapsedMs >= targetSec * 1000) {
+        finishSession(targetSec * 1000);
       }
     }
-  }, 1000);
+  }, 250);
 }
 
 function stopTimer() {
@@ -769,16 +807,17 @@ function stopTimer() {
   }
 }
 
-function finishSession() {
+function finishSession(exactTargetMs = null) {
   if (state.status === 'finished') return;
-  state.accumulatedMs = getElapsedMs();
+  const rawElapsedMs = getElapsedMs();
+  state.accumulatedMs = exactTargetMs !== null ? exactTargetMs : rawElapsedMs;
   state.startTimeMs = 0;
   stopTimer();
   state.status = 'finished';
   document.body.classList.remove('is-typing-active');
 
   const elapsedSecExact = Math.max(1, Math.round(state.accumulatedMs / 1000));
-  const { netWpm, rawWpm, accuracy } = computeCurrentMetrics();
+  const { netWpm, rawWpm, accuracy } = computeCurrentMetrics(state.accumulatedMs);
 
   if (
     state.wpmTimeline.length === 0 ||
@@ -1599,6 +1638,18 @@ function bindEvents() {
     resetSession();
   });
 
+  // Text Difficulty Selector (Standard: Capitals/Numbers/Symbols vs Easy: Small letters only)
+  if (dom.textModeSelector) {
+    dom.textModeSelector.addEventListener('click', (e) => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn || !btn.dataset.textMode) return;
+      prefs.textMode = btn.dataset.textMode === 'easy' ? 'easy' : 'standard';
+      savePrefs(prefs);
+      syncConfigUI();
+      resetSession();
+    });
+  }
+
   // Mode Type Selector (Time vs Pages)
   dom.modeTypeSelector.addEventListener('click', (e) => {
     const btn = e.target.closest('.seg-btn');
@@ -1760,6 +1811,13 @@ function init() {
   state.heatmapLayout = prefs.layout;
   syncConfigUI();
   resetSession();
+
+  // Request durable browser storage & restore from IndexedDB backup if localStorage was ever empty
+  hydratePersistentAuthAndStorage().then((restored) => {
+    if (restored) {
+      reloadActiveUserVault();
+    }
+  });
 
   initPWA({
     installBtn: dom.pwaInstallBtn,

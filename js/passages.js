@@ -1,19 +1,28 @@
 /**
  * AksharType — Curated English & Hindi Typing Passages
  * Standard page sizing: 1 Page = 250 words (~1,350-1,500 chars)
+ * Supports 'standard' (Capitals, Numbers, Symbols & Punctuation) and 'easy' (lowercase / clean letters only).
  */
 
 export const WORDS_PER_PAGE = 250;
 
 export const PASSAGES = [
-  // ===================== ENGLISH PASSAGES =====================
+  // ===================== ENGLISH PASSAGES (Capitals, Numbers & Symbols) =====================
   {
     id: 'en-precision-software',
     language: 'english',
-    category: 'Engineering',
+    category: 'Engineering & Numbers',
     title: 'The Craft of Precision Software',
     text:
-      'Great software feels calm before it feels clever. When an interface responds in milliseconds without jarring motion or noisy decoration, the person behind the keyboard forgets the tool entirely and stays inside their own thoughts. Speed is not merely a benchmark recorded on a chart; it is a form of respect for human attention. Every unnecessary modal, sluggish animation, or crowded control panel steals focus from the real work. Engineers who care about craft study the subtle mechanics of rhythm and latency. They trim redundant bytes, align typography along disciplined grids, and remove every element that does not earn its space on the screen. Over months of daily use, those quiet decisions compound into trust. A reliable editor, terminal, or typing stage becomes an extension of muscle memory, allowing ideas to move directly from mind to screen with minimal friction. When you practice typing with consistency rather than reckless haste, you build the same kind of mechanical composure. Accuracy comes first, rhythm follows naturally, and genuine speed emerges as a byproduct of clean habits repeated thousands of times without hesitation.',
+      'Great software feels calm before it feels clever. When an interface responds in 12ms (under 1/60th of a second) without jarring motion or noisy clutter, the typist forgets the tool entirely. In 2026, top engineering teams treat latency as a core product feature: shaving 45KB off a bundle, holding 99.8% uptime, and running 24/7 checks at 08:30 AM sharp. Engineers who care about craft study rhythm & consistency. They ask direct questions: "Does this button earn its 32px of space?" Over 100+ days of daily practice, small habits compound into real speed—50 WPM becomes 75 WPM, and accuracy climbs past 96.5%. Whether typing API keys like #v2-409, budgets ($1,250.00), or clean English prose, disciplined accuracy comes first and genuine speed follows naturally.',
+  },
+  {
+    id: 'en-numbers-symbols',
+    language: 'english',
+    category: 'Symbols & Office Data',
+    title: 'Release v2.4 Metrics & Operations',
+    text:
+      'Project Report #408 (Q3-2026): Regional servers processed 14,820 requests/sec with 99.94% reliability! Contact ops@akshartype.dev for SLA logs, or verify invoice $3,490.50 under Account_ID: IND-7721. Between 09:15 and 17:45 UTC, latency dropped by -18.5% after upgrading Node v22 + Vite v8. Always double-check symbols—parentheses (), brackets [], slashes /, ampersands &, and percentages (%)—because a single typo in "rate=12.5%" or "tax+fee" can halt a deployment pipeline. Team leads (Aarav, Priya & Kabir) reviewed 42 pull requests, closed 19 tickets (#104 to #122), and recorded 0 critical regressions. Consistent typing across Uppercase, digits (0-9), and punctuation marks builds complete real-world fluency!',
   },
   {
     id: 'en-architecture-clarity',
@@ -21,23 +30,23 @@ export const PASSAGES = [
     category: 'Design & Writing',
     title: 'Clarity in Modern Systems',
     text:
-      'Simplicity is rarely the starting point of any serious project. Early drafts are almost always tangled with competing assumptions, temporary shortcuts, and extra layers added out of caution. True simplicity arrives later, after careful editing and patient observation reveal which parts carry real load and which parts only add visual noise. In architecture, a clean facade hides disciplined structural engineering beneath the surface. In writing, a clear paragraph often takes three revisions to remove hollow adjectives and vague claims. The same principle governs fast and accurate typing. Beginners often rush ahead, striking keys unevenly and hoping that quick corrections will hide small errors. Experienced typists take the opposite view. They keep their posture relaxed, let their eyes read slightly ahead of their fingers, and maintain a steady cadence across difficult punctuation and unfamiliar words. Without the crutch of backspace, every keystroke asks for deliberate awareness. Within a few focused sessions, error rates fall sharply and sustained words per minute climb with surprising ease.',
+      'Simplicity is rarely the starting point of any serious project. Early drafts (Version 0.1 & 0.2) are almost always tangled with competing assumptions, temporary shortcuts, and 3x more layers than necessary. True clarity arrives later—after careful editing reveals which 20% of components carry 80% of the load. In architecture, a clean facade hides disciplined structural math: steel beams rated for 2,400 kg/m2 and tolerances under 0.5mm. In writing, a clear paragraph often takes 3 revisions to cut vague claims. Experienced typists follow the exact same rule: keep posture relaxed, read 2-3 words ahead, and hold a steady pace across Capitals, colons (:), semicolons (;), and hyphens (-). Without Backspace as a crutch, error rates drop below 2.5% within 7 focused sessions.',
   },
   {
     id: 'en-formal-exam',
     language: 'english',
     category: 'Formal Exam Prose',
-    title: 'Public Administration and Digital Records',
+    title: 'Public Administration & Digital Records',
     text:
-      'Modern public administration depends on accurate documentation, transparent record keeping, and timely communication across regional offices. Whether preparing official correspondence, court transcripts, or statistical summaries, clerical precision remains essential even in an era of automated workflows. Digital archives allow citizens to verify land records, submit applications, and track administrative approvals without traveling long distances. However, the usefulness of any electronic registry rests entirely on the quality of the text entered into it. A single mistyped name, transposed numeral, or omitted clause can delay an important file for weeks. For this reason, competitive typing examinations place strict emphasis on net speed after accounting for mistakes rather than raw keystrokes alone. Candidates who train daily under timed conditions learn to balance pace with calm concentration. They monitor their accuracy over extended stretches of three to five minutes, build endurance across multi-page scripts, and develop the discipline required to produce spotless documents on the very first pass.',
+      'Modern public administration depends on accurate records, transparent audits, and timely reports across 28 states & 8 union territories. Whether preparing Circular No. 14/2026, Court Order #902, or Budget Tables totaling Rs. 45,000, clerical accuracy remains essential even in automated workflows. Digital portals let citizens verify Land ID (Plot #19-B), submit Form 16A, and track approvals 100% online. However, any electronic registry is only as trustworthy as the text entered into it! A single mistyped date (12/08/2025 vs 21/08/2025), transposed digit, or missed comma can delay an official file for 15-30 days. Competitive exams (SSC, CPCT & High Court) therefore grade strict Net WPM over 3-minute and 5-minute runs: speed + precision on the very first pass.',
   },
   {
     id: 'en-science-time',
     language: 'english',
     category: 'Science & History',
-    title: 'Measuring Time and Human Rhythm',
+    title: 'Measuring Time & Human Rhythm',
     text:
-      'For centuries, sailors crossing open oceans faced a single deadly puzzle: determining longitude accurately once the coastline vanished behind the horizon. Latitude could be read from the sun or stars, yet longitude demanded a clock capable of keeping exact time through rolling waves, salt air, and sudden shifts in temperature. While astronomers searched the night sky for complex lunar tables, a self-taught carpenter named John Harrison spent decades refining brass springs, bimetallic strips, and diamond bearings until his marine chronometer lost only seconds across an entire Atlantic voyage. Breakthroughs in precision rarely arrive from a single dramatic flash of genius. They grow out of stubborn iteration, honest measurement, and small daily improvements logged carefully over time. Tracking your own words per minute and accuracy follows that exact scientific tradition: you measure honestly, inspect where rhythm dips, and refine your technique one deliberate session at a time.',
+      'In 1714, the British Parliament offered £20,000 (millions in today\'s currency!) to anyone who could measure longitude within 0.5 degrees on the open sea. Latitude could be read from the Sun or Polaris, yet longitude demanded a clock accurate to +/- 3 seconds per day through 40-foot waves and +35C tropical heat. While astronomers compiled 500-page lunar tables, a self-taught carpenter named John Harrison spent 37 years building H1, H2, H3, and H4—his 1759 marine watch lost just 5.1 seconds across an 81-day Atlantic voyage! Breakthroughs in precision rarely arrive by accident: they grow from honest measurement, steady feedback, and daily logs tracked 1% better at a time.',
   },
 
   // ===================== HINDI PASSAGES =====================
@@ -83,13 +92,53 @@ export function getPassagesByLanguage(language) {
 }
 
 /**
+ * Transform text for Easy Mode (lowercase letters only in English; clean unpunctuated words in Hindi).
+ * Standard Mode preserves exact Capital Letters, Numbers, Symbols & Punctuation.
+ */
+function applyTextMode(rawText, language, textMode) {
+  // Normalize smart typography (em-dash / currency not on standard US QWERTY) to standard typable ASCII
+  let clean = rawText
+    .replace(/[—–]/g, ' - ')
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/£/g, '$');
+
+  if (textMode !== 'easy') {
+    return clean.replace(/\s+/g, ' ').trim();
+  }
+
+  if (language === 'english') {
+    // Easy Mode: strictly small letters (a-z) and single spaces — zero capitals, zero numbers, zero symbols
+    return clean
+      .toLowerCase()
+      .replace(/[^a-z\s]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Hindi Easy Mode: remove punctuation and numerals for smooth continuous Devanagari word flow
+  return clean
+    .replace(/[0-9०-९.,;!?()"'\/\-।|:@#$%&+]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
  * Compose a practice text string sized to either:
  * - Pages mode: exact word target (pageCount * WORDS_PER_PAGE)
- * - Time mode: generous buffer sized for durationMinutes (min 350 words, ~90 wpm * minutes)
- * Seamlessly loops or chains passages from the same language if needed.
+ * - Time mode: generous buffer sized for durationMinutes (min 260 words, ~95 wpm * minutes)
+ * Seamlessly chains passages of the same language if needed and applies Standard vs Easy text mode.
  */
-export function buildSessionText(passage, testMode, durationMinutes, pageCount) {
-  const baseWords = passage.text.trim().split(/\s+/).filter(Boolean);
+export function buildSessionText(
+  passage,
+  testMode,
+  durationMinutes,
+  pageCount,
+  textMode = 'standard'
+) {
+  const effectiveMode = passage.isCustom ? 'standard' : textMode;
+  const primaryText = applyTextMode(passage.text, passage.language, effectiveMode);
+  const baseWords = primaryText.split(/\s+/).filter(Boolean);
   if (baseWords.length === 0) return '';
 
   const targetWords =
@@ -97,15 +146,14 @@ export function buildSessionText(passage, testMode, durationMinutes, pageCount) 
       ? Math.max(40, pageCount * WORDS_PER_PAGE)
       : Math.max(260, Math.ceil(durationMinutes * 95));
 
-  // If custom passage in Pages mode is shorter than target, repeat cleanly to fill requested pages
-  // If curated passage, chain sibling passages of the same language for natural reading variety!
   const poolWords = [...baseWords];
   if (!passage.isCustom) {
     const siblings = PASSAGES.filter(
       (p) => p.language === passage.language && p.id !== passage.id
     );
     for (const sib of siblings) {
-      poolWords.push(...sib.text.trim().split(/\s+/).filter(Boolean));
+      const sibText = applyTextMode(sib.text, sib.language, effectiveMode);
+      poolWords.push(...sibText.split(/\s+/).filter(Boolean));
     }
   }
 

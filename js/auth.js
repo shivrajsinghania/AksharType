@@ -1,12 +1,140 @@
 /**
- * AksharType — 100% Client-Side Local Authentication (Offline-First)
+ * AksharType — 100% Client-Side Local Authentication (Offline-First & Never Auto-Logout)
  * Uses Web Crypto PBKDF2-HMAC-SHA256 (100,000 iterations + per-user 16-byte random salt).
- * Passwords are never stored in plaintext.
+ * Persists accounts & active session in localStorage AND mirrors to IndexedDB + Persistent Storage API
+ * so users stay signed in across reloads, restarts, and offline sessions until they explicitly sign out.
  */
 
 const ACCOUNTS_KEY = 'akshartype_accounts_v1';
 const ACTIVE_USER_KEY = 'akshartype_active_user_v1';
+const ACTIVE_SNAPSHOT_KEY = 'akshartype_active_snapshot_v1';
 const PBKDF2_ITERATIONS = 100000;
+
+const IDB_NAME = 'akshartype_persistent_db';
+const IDB_STORE = 'kv';
+
+function openPersistDb() {
+  return new Promise((resolve) => {
+    if (typeof indexedDB === 'undefined') {
+      resolve(null);
+      return;
+    }
+    try {
+      const req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+export async function idbSet(key, value) {
+  const db = await openPersistDb();
+  if (!db) return;
+  try {
+    await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).put(value, key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    // Ignore IDB write failures gracefully
+  }
+}
+
+export async function idbGetAll() {
+  const db = await openPersistDb();
+  if (!db) return {};
+  try {
+    return await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const result = {};
+      const cursorReq = store.openCursor();
+      cursorReq.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          result[cursor.key] = cursor.value;
+          cursor.continue();
+        } else {
+          resolve(result);
+        }
+      };
+      cursorReq.onerror = () => resolve({});
+    });
+  } catch {
+    return {};
+  }
+}
+
+export async function idbDelete(key) {
+  const db = await openPersistDb();
+  if (!db) return;
+  try {
+    await new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch {
+    // Ignore
+  }
+}
+
+/**
+ * Request durable persistent storage from the browser (prevents eviction of localStorage/IDB/PWA caches)
+ * and restore any missing localStorage keys from the IndexedDB backup if needed.
+ */
+export async function hydratePersistentAuthAndStorage() {
+  try {
+    if (navigator.storage && typeof navigator.storage.persist === 'function') {
+      const already = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+      if (!already) {
+        await navigator.storage.persist();
+      }
+    }
+  } catch {
+    // Safe fallback if browser declines
+  }
+
+  let restored = false;
+  try {
+    const backup = await idbGetAll();
+    for (const [k, v] of Object.entries(backup)) {
+      if (typeof v === 'string' && !localStorage.getItem(k)) {
+        localStorage.setItem(k, v);
+        restored = true;
+      }
+    }
+    // Also mirror current localStorage keys into IDB if IDB didn't have them yet
+    const keysToMirror = [ACCOUNTS_KEY, ACTIVE_USER_KEY, ACTIVE_SNAPSHOT_KEY];
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('akshartype_vault_')) {
+        keysToMirror.push(k);
+      }
+    }
+    for (const k of keysToMirror) {
+      const val = localStorage.getItem(k);
+      if (val && !backup[k]) {
+        idbSet(k, val);
+      }
+    }
+  } catch {
+    // Non-fatal
+  }
+
+  return restored;
+}
 
 function bytesToHex(bytes) {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
@@ -46,9 +174,6 @@ function timingSafeEqualHex(a, b) {
   return diff === 0;
 }
 
-/**
- * Derive password hash using Web Crypto PBKDF2-SHA256.
- */
 async function derivePasswordHash(password, saltHex) {
   const enc = new TextEncoder();
   const saltBytes = hexToBytes(saltHex);
@@ -74,7 +199,6 @@ async function derivePasswordHash(password, saltHex) {
     return `pbkdf2:${bytesToHex(new Uint8Array(derived))}`;
   }
 
-  // Fallback pure-JS iterative mixing only if subtle crypto is unavailable in an unsecure context
   let acc = `${saltHex}:${password}`;
   let h1 = 0x811c9dc5;
   let h2 = 0x01000193;
@@ -102,9 +226,27 @@ function readAccountsRaw() {
 
 function writeAccountsRaw(accounts) {
   try {
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(accounts));
+    const serialized = JSON.stringify(accounts);
+    localStorage.setItem(ACCOUNTS_KEY, serialized);
+    idbSet(ACCOUNTS_KEY, serialized);
   } catch {
     // Ignore quota errors gracefully
+  }
+}
+
+function persistActiveSession(user) {
+  try {
+    const snapshot = JSON.stringify({
+      id: user.id,
+      username: user.username,
+      createdAt: user.createdAt,
+    });
+    localStorage.setItem(ACTIVE_USER_KEY, user.id);
+    localStorage.setItem(ACTIVE_SNAPSHOT_KEY, snapshot);
+    idbSet(ACTIVE_USER_KEY, user.id);
+    idbSet(ACTIVE_SNAPSHOT_KEY, snapshot);
+  } catch {
+    // Ignore
   }
 }
 
@@ -126,20 +268,36 @@ export function validateCredentials(username, password) {
   return null;
 }
 
+/**
+ * Returns the currently signed-in local user.
+ * Never logs out automatically unless the user explicitly calls signOut().
+ */
 export function getActiveUser() {
   try {
     const activeId = localStorage.getItem(ACTIVE_USER_KEY);
-    if (!activeId) return null;
-    const found = readAccountsRaw().find((a) => a.id === activeId);
-    if (!found) {
-      localStorage.removeItem(ACTIVE_USER_KEY);
-      return null;
+    if (activeId) {
+      const found = readAccountsRaw().find((a) => a.id === activeId);
+      if (found) {
+        return {
+          id: found.id,
+          username: found.username,
+          createdAt: found.createdAt,
+        };
+      }
     }
-    return {
-      id: found.id,
-      username: found.username,
-      createdAt: found.createdAt,
-    };
+    // Fallback to durable session snapshot so transient state never causes an unexpected logout
+    const snapRaw = localStorage.getItem(ACTIVE_SNAPSHOT_KEY);
+    if (snapRaw) {
+      const snap = JSON.parse(snapRaw);
+      if (snap && snap.id && snap.username) {
+        return {
+          id: snap.id,
+          username: snap.username,
+          createdAt: snap.createdAt || Date.now(),
+        };
+      }
+    }
+    return null;
   } catch {
     return null;
   }
@@ -167,7 +325,10 @@ export async function createAccount({ username, password }) {
   const accounts = readAccountsRaw();
 
   if (accounts.some((a) => a.normalizedUsername === normalized)) {
-    return { ok: false, error: 'That username already exists on this device. Try signing in instead.' };
+    return {
+      ok: false,
+      error: 'That username already exists on this device. Try signing in instead.',
+    };
   }
 
   const saltHex = generateSaltHex();
@@ -186,20 +347,22 @@ export async function createAccount({ username, password }) {
   accounts.push(record);
   writeAccountsRaw(accounts);
 
+  const userObj = {
+    id: record.id,
+    username: record.username,
+    createdAt: record.createdAt,
+  };
+  persistActiveSession(userObj);
+
   try {
-    localStorage.setItem(ACTIVE_USER_KEY, id);
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
   } catch {
     // Ignore
   }
 
-  return {
-    ok: true,
-    user: {
-      id: record.id,
-      username: record.username,
-      createdAt: record.createdAt,
-    },
-  };
+  return { ok: true, user: userObj };
 }
 
 export async function signIn({ username, password }) {
@@ -220,25 +383,25 @@ export async function signIn({ username, password }) {
     return { ok: false, error: 'Invalid username or password.' };
   }
 
-  try {
-    localStorage.setItem(ACTIVE_USER_KEY, account.id);
-  } catch {
-    // Ignore
-  }
-
-  return {
-    ok: true,
-    user: {
-      id: account.id,
-      username: account.username,
-      createdAt: account.createdAt,
-    },
+  const userObj = {
+    id: account.id,
+    username: account.username,
+    createdAt: account.createdAt,
   };
+  persistActiveSession(userObj);
+
+  return { ok: true, user: userObj };
 }
 
+/**
+ * Explicit manual sign out only.
+ */
 export function signOut() {
   try {
     localStorage.removeItem(ACTIVE_USER_KEY);
+    localStorage.removeItem(ACTIVE_SNAPSHOT_KEY);
+    idbDelete(ACTIVE_USER_KEY);
+    idbDelete(ACTIVE_SNAPSHOT_KEY);
   } catch {
     // Ignore
   }
