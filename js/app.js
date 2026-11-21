@@ -36,6 +36,7 @@ import {
 import { ResultsChart, TrendChart } from './chart.js';
 import { KeyboardGuide, renderWeakKeyHeatmap } from './keyboard-ui.js';
 import { initPWA } from './pwa.js';
+import { BuddyController } from './buddy-ui.js';
 
 // ============================================================================
 // DOM References
@@ -242,7 +243,55 @@ const state = {
   isComposing: false,
   isCustomModalOpen: false,
   isAccountModalOpen: false,
+  isBuddyChatOpen: false,
 };
+
+const buddy = new BuddyController({
+  onChatToggle: (isOpen) => {
+    state.isBuddyChatOpen = isOpen;
+    if (isOpen) {
+      exitFocusMode(true);
+    } else if (state.activeView === 'practice' && state.status !== 'finished') {
+      focusTypingStage();
+    }
+  },
+  onFocusPractice: () => {
+    switchView('practice');
+    focusTypingStage();
+  },
+  onLaunchWeakKeysDrill: (layoutId) => {
+    if (layoutId && LAYOUTS[layoutId]) {
+      state.heatmapLayout = layoutId;
+    }
+    launchWeakKeysDrill();
+  },
+  onLaunchCustomDrill: ({ title, text }) => {
+    const clean = String(text || '').replace(/\s+/g, ' ').trim();
+    if (clean.length < 15) return;
+    const hasDevanagari = /[\u0900-\u097F]/.test(clean);
+    const detectedLang = hasDevanagari ? 'hindi' : 'english';
+    state.currentPassage = {
+      id: `kibo-drill-${Date.now()}`,
+      language: detectedLang,
+      category: 'Kibo Drill',
+      title: title || 'Kibo Custom Drill',
+      text: clean,
+      isCustom: true,
+    };
+    const currentLayout = LAYOUTS[prefs.layout] || LAYOUTS.english;
+    if (detectedLang === 'hindi' && !currentLayout.isHindi) {
+      prefs.layout = 'mangal';
+      savePrefs(prefs);
+      syncConfigUI();
+    } else if (detectedLang === 'english' && currentLayout.isHindi) {
+      prefs.layout = 'english';
+      savePrefs(prefs);
+      syncConfigUI();
+    }
+    switchView('practice');
+    resetSession();
+  },
+});
 
 // ============================================================================
 // Formatting & Metric Helpers
@@ -385,6 +434,7 @@ function reloadActiveVaultAndUI() {
   state.heatmapLayout = prefs.layout;
   syncAccountHeaderUI();
   syncConfigUI();
+  buddy.onVaultChanged();
   if (state.activeView === 'performance') {
     renderPerformanceDashboard();
   }
@@ -893,6 +943,14 @@ function finishSession(exactTargetMs = null) {
   window.requestAnimationFrame(() => {
     resultsChart.render(state.wpmTimeline);
   });
+
+  buddy.onSessionComplete({
+    isNewPB,
+    netWpm,
+    accuracy,
+    errorChars: state.errorTokens,
+    totalChars: state.correctTokens + state.errorTokens,
+  });
 }
 
 // ============================================================================
@@ -1044,6 +1102,7 @@ function focusTypingStage() {
     state.activeView !== 'practice' ||
     state.isCustomModalOpen ||
     state.isAccountModalOpen ||
+    state.isBuddyChatOpen ||
     state.status === 'finished'
   ) {
     return;
@@ -1057,6 +1116,7 @@ function isTypingContextBlocked(target) {
   if (
     state.isCustomModalOpen ||
     state.isAccountModalOpen ||
+    state.isBuddyChatOpen ||
     state.activeView !== 'practice' ||
     state.status === 'finished'
   ) {
@@ -1070,6 +1130,10 @@ function isTypingContextBlocked(target) {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
+    if (state.isBuddyChatOpen) {
+      buddy.closeChat();
+      return;
+    }
     if (state.isAccountModalOpen) {
       closeAccountModal();
       return;
@@ -1159,7 +1223,8 @@ window.addEventListener('blur', () => {
     state.status === 'running' &&
     state.activeView === 'practice' &&
     !state.isCustomModalOpen &&
-    !state.isAccountModalOpen
+    !state.isAccountModalOpen &&
+    !state.isBuddyChatOpen
   ) {
     dom.focusScrim.classList.remove('is-hidden');
     dom.typingStage.classList.remove('is-focused');
@@ -1289,6 +1354,9 @@ function renderPerformanceDashboard() {
 
   dom.perfTestsCount.textContent = String(metrics.totalTests);
   dom.perfStreakSub.textContent = `${metrics.streakDays}-day streak · ${metrics.totalWordsTyped.toLocaleString()} words`;
+
+  // 2.5 AI Typing Buddy Personal Coach
+  buddy.refreshPerformanceCoach(state.perfLayoutFilter);
 
   // 3. All-Time WPM & Accuracy Trend Chart
   window.requestAnimationFrame(() => {
@@ -1815,9 +1883,11 @@ function init() {
   // Request durable browser storage & restore from IndexedDB backup if localStorage was ever empty
   hydratePersistentAuthAndStorage().then((restored) => {
     if (restored) {
-      reloadActiveUserVault();
+      reloadActiveVaultAndUI();
     }
   });
+
+  buddy.init();
 
   initPWA({
     installBtn: dom.pwaInstallBtn,

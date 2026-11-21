@@ -30,6 +30,42 @@ function normalizeLayoutId(id) {
   return 'english';
 }
 
+function emptyBuddyState() {
+  return {
+    preferredName: '',
+    goal: '',
+    memories: [],
+    chatHistory: [],
+    cachedBrief: null,
+    cachedFingerprint: '',
+  };
+}
+
+function normalizeBuddyState(raw) {
+  const base = emptyBuddyState();
+  if (!raw || typeof raw !== 'object') return base;
+  base.preferredName = typeof raw.preferredName === 'string' ? raw.preferredName.trim().slice(0, 32) : '';
+  base.goal = typeof raw.goal === 'string' ? raw.goal.trim().slice(0, 90) : '';
+  if (Array.isArray(raw.memories)) {
+    base.memories = raw.memories
+      .filter((m) => typeof m === 'string' && m.trim())
+      .map((m) => m.trim().slice(0, 100))
+      .slice(-8);
+  }
+  if (Array.isArray(raw.chatHistory)) {
+    base.chatHistory = raw.chatHistory
+      .filter((msg) => msg && (msg.role === 'user' || msg.role === 'assistant') && typeof msg.content === 'string')
+      .slice(-30);
+  }
+  if (raw.cachedBrief && typeof raw.cachedBrief === 'object') {
+    base.cachedBrief = raw.cachedBrief;
+  }
+  if (typeof raw.cachedFingerprint === 'string') {
+    base.cachedFingerprint = raw.cachedFingerprint;
+  }
+  return base;
+}
+
 function emptyVault() {
   return {
     prefs: { ...DEFAULT_PREFS },
@@ -39,6 +75,7 @@ function emptyVault() {
       mangal: {},
       'kruti-dev': {},
     },
+    buddy: emptyBuddyState(),
   };
 }
 
@@ -99,6 +136,7 @@ function readVaultByKey(key) {
           'kruti-dev': parsed.keyStats['kruti-dev'] || {},
         };
       }
+      vault.buddy = normalizeBuddyState(parsed.buddy);
     }
     return vault;
   } catch {
@@ -136,12 +174,43 @@ export function loadKeyStats() {
   return readVaultByKey(getActiveVaultKey()).keyStats;
 }
 
+export function loadBuddyState() {
+  return readVaultByKey(getActiveVaultKey()).buddy;
+}
+
+export function saveBuddyState(partial) {
+  const key = getActiveVaultKey();
+  const vault = readVaultByKey(key);
+  vault.buddy = normalizeBuddyState({ ...vault.buddy, ...partial });
+  writeVaultByKey(key, vault);
+  return vault.buddy;
+}
+
+export function appendBuddyMemory(note) {
+  const clean = typeof note === 'string' ? note.trim().slice(0, 100) : '';
+  if (!clean) return loadBuddyState();
+  const key = getActiveVaultKey();
+  const vault = readVaultByKey(key);
+  const existing = vault.buddy.memories || [];
+  const norm = clean.toLowerCase();
+  if (existing.some((m) => m.toLowerCase() === norm)) {
+    return vault.buddy;
+  }
+  vault.buddy.memories = [...existing, clean].slice(-8);
+  writeVaultByKey(key, vault);
+  return vault.buddy;
+}
+
+export function clearBuddyMemories() {
+  return saveBuddyState({ memories: [], goal: '' });
+}
+
 export function hasGuestSessions() {
   return readVaultByKey(GUEST_VAULT_KEY).sessions.length > 0;
 }
 
 /**
- * Copy guest sessions, keyStats, and prefs into the newly created active user vault.
+ * Copy guest sessions, keyStats, buddy memory, and prefs into the newly created active user vault.
  */
 export function importGuestDataIntoActiveVault() {
   const targetKey = getActiveVaultKey();
@@ -167,6 +236,20 @@ export function importGuestDataIntoActiveVault() {
     }
     target.keyStats[layoutId] = dstMap;
   }
+
+  // Merge guest buddy notes if target has none yet
+  const mergedMem = Array.from(
+    new Set([...(guest.buddy?.memories || []), ...(target.buddy?.memories || [])])
+  ).slice(-8);
+  target.buddy = normalizeBuddyState({
+    ...guest.buddy,
+    ...target.buddy,
+    memories: mergedMem,
+    chatHistory:
+      (target.buddy?.chatHistory?.length || 0) > 0
+        ? target.buddy.chatHistory
+        : guest.buddy?.chatHistory || [],
+  });
 
   writeVaultByKey(targetKey, target);
 }
@@ -203,6 +286,9 @@ export function recordSession(session, sessionKeyStats = null) {
     vault.keyStats[layoutId] = bucket;
   }
 
+  // Invalidate cached buddy brief so Performance tab gets fresh insights next visit
+  vault.buddy.cachedFingerprint = '';
+
   writeVaultByKey(key, vault);
   return { entry, isNewPB, history: vault.sessions };
 }
@@ -211,6 +297,7 @@ export function deleteSession(sessionId) {
   const key = getActiveVaultKey();
   const vault = readVaultByKey(key);
   vault.sessions = vault.sessions.filter((item) => item.id !== sessionId);
+  vault.buddy.cachedFingerprint = '';
   writeVaultByKey(key, vault);
   return vault.sessions;
 }
@@ -224,6 +311,8 @@ export function clearHistory() {
     mangal: {},
     'kruti-dev': {},
   };
+  vault.buddy.cachedFingerprint = '';
+  vault.buddy.cachedBrief = null;
   writeVaultByKey(key, vault);
   return [];
 }

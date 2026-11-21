@@ -318,6 +318,7 @@
             <div class="results-actions">
               <button type="button" class="btn-primary" id="res-retry-btn">Practice Again</button>
               <button type="button" class="btn-secondary" id="res-next-btn">Next Passage</button>
+              <button type="button" class="btn-secondary" id="res-ask-buddy-btn">Kibo से पूछो</button>
               <button type="button" class="btn-ghost" id="res-performance-btn">Open Performance</button>
             </div>
           </div>
@@ -399,6 +400,61 @@
               <span class="kpi-label">Tests &amp; Streak</span>
               <span class="kpi-value tabular-nums" id="perf-tests-count">0</span>
               <span class="kpi-sub tabular-nums" id="perf-streak-sub">0-day streak &middot; 0 words</span>
+            </div>
+          </div>
+
+          <!-- AI Typing Buddy Coaching Hub (Kibo powered by Groq) -->
+          <div class="buddy-perf-card" id="buddy-perf-card" aria-label="Kibo AI Typing Buddy">
+            <div class="buddy-perf-top">
+              <div class="buddy-perf-identity">
+                <div class="kibo-avatar kibo-avatar-lg mood-idle" id="buddy-perf-avatar" aria-hidden="true"></div>
+                <div class="buddy-perf-heading">
+                  <h2 class="buddy-perf-headline" id="buddy-perf-headline">अरे दोस्त! मैं Kibo हूँ—चलो तुम्हारी स्पीड चेक करते हैं।</h2>
+                  <div class="buddy-perf-meta-row">
+                    <span class="buddy-perf-meta" id="buddy-perf-meta">Kibo AI Coach · Real-time diagnostics</span>
+                    <span class="meta-sep" aria-hidden="true">&middot;</span>
+                    <button type="button" class="buddy-inline-link" id="buddy-edit-name-btn">अपना नाम सेट करो</button>
+                  </div>
+                  <form class="buddy-name-inline-form is-hidden" id="buddy-name-inline-form">
+                    <input
+                      type="text"
+                      id="buddy-name-inline-input"
+                      class="buddy-mini-input"
+                      placeholder="Kibo तुम्हें किस नाम से बुलाए?"
+                      maxlength="32"
+                      aria-label="Preferred name for Kibo"
+                    />
+                    <button type="submit" class="btn-secondary btn-sm">Save</button>
+                  </form>
+                </div>
+              </div>
+
+              <div class="buddy-perf-top-actions">
+                <button type="button" class="btn-ghost btn-sm" id="buddy-perf-refresh-btn">Refresh Insight</button>
+                <button type="button" class="btn-secondary btn-sm" id="buddy-perf-chat-btn">Kibo से Chat करो</button>
+              </div>
+            </div>
+
+            <div class="buddy-perf-body">
+              <div class="buddy-diag-col">
+                <div class="buddy-sublabel">गलती कहाँ हो रही है</div>
+                <p class="buddy-why-text" id="buddy-perf-why">
+                  एक छोटा सा टेस्ट पूरा करो, फिर मैं तुम्हारी exact गलतियाँ और स्पीड का पैटर्न पकड़ कर बताऊँगा।
+                </p>
+                <p class="buddy-celebration is-hidden" id="buddy-perf-celebration"></p>
+              </div>
+
+              <div class="buddy-plan-col">
+                <div class="buddy-sublabel">आगे क्या करना है</div>
+                <ol class="buddy-steps-list" id="buddy-perf-actions"></ol>
+              </div>
+            </div>
+
+            <div class="buddy-perf-footer">
+              <div class="buddy-quick-prompts" id="buddy-perf-quick-prompts"></div>
+              <button type="button" class="btn-primary btn-sm" id="buddy-perf-drill-btn">
+                Recommended Practice शुरू करो
+              </button>
             </div>
           </div>
 
@@ -677,6 +733,107 @@
         </div>
       </div>
     </div>
+
+    <!-- ===================== FLOATING DRAGGABLE KIBO BUDDY ===================== -->
+    <div class="buddy-fab-root" id="buddy-fab-root">
+      <div class="buddy-fab-bubble is-hidden" id="buddy-fab-bubble" role="status" aria-live="polite">
+        <div class="buddy-fab-bubble-head">
+          <span class="buddy-fab-bubble-title" id="buddy-fab-bubble-title"></span>
+          <button
+            type="button"
+            class="buddy-fab-bubble-close"
+            id="buddy-fab-bubble-close"
+            aria-label="Dismiss Kibo popup"
+          >
+            &times;
+          </button>
+        </div>
+        <p class="buddy-fab-bubble-text" id="buddy-fab-bubble-text"></p>
+        <div class="buddy-fab-bubble-actions is-hidden" id="buddy-fab-bubble-actions"></div>
+      </div>
+      <button
+        type="button"
+        class="buddy-fab-btn"
+        id="buddy-fab-btn"
+        aria-label="Open Kibo AI typing buddy chat (drag to move)"
+        aria-expanded="false"
+        aria-controls="buddy-chat-drawer"
+        title="Kibo से बात करो (drag to move)"
+      >
+        <span class="kibo-avatar kibo-avatar-fab mood-idle" id="buddy-fab-avatar" aria-hidden="true"></span>
+      </button>
+    </div>
+
+    <!-- ===================== KIBO FRIEND CHAT DRAWER ===================== -->
+    <aside
+      class="buddy-chat-drawer is-hidden"
+      id="buddy-chat-drawer"
+      role="dialog"
+      aria-label="Kibo AI Typing Buddy Chat"
+    >
+      <div class="buddy-chat-header">
+        <div class="buddy-chat-id">
+          <div class="kibo-avatar kibo-avatar-sm mood-idle" id="buddy-chat-avatar" aria-hidden="true"></div>
+          <div class="buddy-chat-title-wrap">
+            <div class="buddy-chat-title">Kibo</div>
+            <div class="buddy-chat-subtitle" id="buddy-chat-subtitle">दोस्त · live stats synced</div>
+          </div>
+        </div>
+        <div class="buddy-chat-controls">
+          <button type="button" class="btn-ghost btn-sm" id="buddy-memory-toggle" title="Kibo क्या याद रखता है">
+            Memory
+          </button>
+          <button type="button" class="btn-ghost btn-sm" id="buddy-chat-clear" title="Chat साफ करो">
+            Clear
+          </button>
+          <button type="button" class="btn-ghost btn-sm" id="buddy-chat-close" aria-label="Close chat">
+            Close
+          </button>
+        </div>
+      </div>
+
+      <!-- Collapsible Evolving Memory Panel -->
+      <div class="buddy-memory-panel is-hidden" id="buddy-memory-panel">
+        <div class="mem-grid">
+          <label class="mem-field">
+            <span class="mem-label">मेरा नाम</span>
+            <input type="text" id="buddy-mem-name" class="buddy-mini-input" placeholder="तुम्हारा नाम" maxlength="32" />
+          </label>
+          <label class="mem-field">
+            <span class="mem-label">Typing Goal</span>
+            <input
+              type="text"
+              id="buddy-mem-goal"
+              class="buddy-mini-input"
+              placeholder="जैसे: 40 WPM Hindi Mangal / CPCT"
+              maxlength="90"
+            />
+          </label>
+        </div>
+        <div class="mem-actions-row">
+          <button type="button" class="btn-secondary btn-sm" id="buddy-mem-save">Save करो</button>
+          <button type="button" class="btn-ghost btn-sm btn-danger-text" id="buddy-mem-clear">Memory Reset</button>
+        </div>
+        <div class="mem-section-label">Kibo ने तुम्हारे बारे में क्या सीखा</div>
+        <div class="mem-list" id="buddy-mem-list"></div>
+      </div>
+
+      <div class="buddy-chat-messages" id="buddy-chat-messages" aria-live="polite"></div>
+
+      <div class="buddy-chat-quick" id="buddy-chat-quick"></div>
+
+      <form class="buddy-chat-form" id="buddy-chat-form">
+        <input
+          type="text"
+          id="buddy-chat-input"
+          class="buddy-chat-input"
+          placeholder="Kibo से पूछो — गलती, स्पीड या drill..."
+          maxlength="500"
+          autocomplete="off"
+        />
+        <button type="submit" class="btn-primary btn-sm" id="buddy-chat-send">Send</button>
+      </form>
+    </aside>
 
     <script type="module" src="/js/app.js"></script>
   </body>
