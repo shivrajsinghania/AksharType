@@ -23,9 +23,12 @@
   --accent-primary: #fafafa;
   --accent-primary-ink: #09090b;
   --accent-correct: #34d399;
+  --accent-correct-soft: rgba(52, 211, 153, 0.14);
+  --accent-warn: #f59e0b;
+  --accent-warn-soft: rgba(245, 158, 11, 0.14);
   --accent-error: #f87171;
   --accent-error-line: rgba(248, 113, 113, 0.7);
-  --accent-error-soft: rgba(239, 68, 68, 0.11);
+  --accent-error-soft: rgba(239, 68, 68, 0.12);
   --accent-caret: #fafafa;
   --accent-key-next: #38bdf8;
   --accent-key-next-soft: rgba(56, 189, 248, 0.13);
@@ -119,7 +122,6 @@ a:focus-visible {
   justify-content: space-between;
   gap: 32px;
   border-bottom: 1px solid var(--border-subtle);
-  transition: opacity 200ms var(--ease-out);
 }
 
 .brand-wordmark {
@@ -167,6 +169,7 @@ a:focus-visible {
 .top-actions {
   display: flex;
   align-items: center;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -232,6 +235,10 @@ a:focus-visible {
   font-size: 0.75rem;
 }
 
+.btn-full {
+  width: 100%;
+}
+
 .btn-danger-text:hover {
   color: var(--accent-error);
   background-color: var(--accent-error-soft);
@@ -257,7 +264,7 @@ a:focus-visible {
   width: 100%;
   max-width: var(--container-max);
   margin: 0 auto;
-  padding: 24px 24px 40px;
+  padding: 24px 24px 48px;
   display: flex;
   flex-direction: column;
 }
@@ -265,7 +272,7 @@ a:focus-visible {
 .view-section {
   display: none;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
   flex: 1;
 }
 
@@ -312,6 +319,14 @@ a:focus-visible {
   background-color: var(--bg-canvas);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
+}
+
+.segmented-full {
+  width: 100%;
+}
+
+.segmented-full .seg-btn {
+  flex: 1 1 0;
 }
 
 .seg-btn {
@@ -595,7 +610,6 @@ a:focus-visible {
   text-decoration-color: var(--accent-error-line);
 }
 
-/* Smooth GPU-accelerated vertical caret */
 .stream-caret {
   position: absolute;
   top: 0;
@@ -747,7 +761,6 @@ body.is-typing-active .focus-footer {
   display: flex;
 }
 
-/* When keymap is open during active typing, reserve clean height so both fit on small screens */
 body.is-typing-active.has-keymap-open .stream-viewport,
 body.is-typing-active.has-keymap-open .typing-stage.is-hindi .stream-viewport {
   height: clamp(160px, calc(100vh - 460px), 260px);
@@ -758,7 +771,6 @@ body.is-typing-active.has-keymap-open .typing-stage {
   padding: 12px 8px;
 }
 
-/* Stage Footer */
 .stage-footer {
   display: flex;
   align-items: center;
@@ -789,7 +801,7 @@ body.is-typing-active.has-keymap-open .typing-stage {
 }
 
 /* ==========================================================================
-   Interactive On-Screen Keymap Guide
+   Interactive On-Screen Keyboard & Heatmap Keys
    ========================================================================== */
 
 .keymap-drawer {
@@ -935,8 +947,42 @@ body.is-typing-active.has-keymap-open .typing-stage {
   transform: translateY(1px);
 }
 
+/* Heatmap error intensity tiers */
+.kb-heat-key {
+  cursor: default;
+}
+
+.kb-heat-pct {
+  font-size: 0.58rem;
+  color: var(--text-secondary);
+}
+
+.kb-heat-key.heat-clean {
+  background-color: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.kb-heat-key.heat-low {
+  background-color: rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.kb-heat-key.heat-med {
+  background-color: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.65);
+}
+
+.kb-heat-key.heat-high {
+  background-color: rgba(239, 68, 68, 0.22);
+  border-color: rgba(248, 113, 113, 0.75);
+}
+
+.kb-heat-key.heat-high .kb-heat-pct {
+  color: var(--accent-error);
+}
+
 /* ==========================================================================
-   Post-Test Results & Chart
+   Post-Test Results & Charts
    ========================================================================== */
 
 .results-panel {
@@ -988,7 +1034,7 @@ body.is-typing-active.has-keymap-open .typing-stage {
 }
 
 .kpi-cell {
-  padding: 22px 24px;
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -1006,14 +1052,14 @@ body.is-typing-active.has-keymap-open .typing-stage {
 }
 
 .kpi-value {
-  font-size: 2rem;
+  font-size: 1.9rem;
   font-weight: 600;
   line-height: 1.1;
   color: var(--text-primary);
 }
 
 .kpi-value-hero {
-  font-size: 2.35rem;
+  font-size: 2.25rem;
 }
 
 .kpi-sub {
@@ -1021,7 +1067,39 @@ body.is-typing-active.has-keymap-open .typing-stage {
   color: var(--text-muted);
 }
 
-/* Chart Card */
+.kpi-sub.is-positive {
+  color: var(--accent-correct);
+}
+
+.kpi-sub.is-negative {
+  color: var(--accent-error);
+}
+
+/* Right vs Wrong Proportion Bar */
+.ratio-bar {
+  width: 100%;
+  height: 5px;
+  border-radius: 4px;
+  background-color: var(--bg-canvas);
+  overflow: hidden;
+  display: flex;
+  margin: 2px 0;
+}
+
+.ratio-bar-right {
+  height: 100%;
+  background-color: var(--accent-correct);
+  width: 0%;
+  transition: width 260ms var(--ease-out);
+}
+
+.ratio-bar-wrong {
+  height: 100%;
+  background-color: var(--accent-error);
+  width: 0%;
+  transition: width 260ms var(--ease-out);
+}
+
 .chart-card {
   padding: 20px 24px 24px;
   background-color: var(--bg-surface);
@@ -1041,7 +1119,7 @@ body.is-typing-active.has-keymap-open .typing-stage {
 }
 
 .chart-title {
-  font-size: 0.875rem;
+  font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -1075,6 +1153,10 @@ body.is-typing-active.has-keymap-open .typing-stage {
   background-color: var(--text-muted);
 }
 
+.swatch-acc {
+  background-color: var(--accent-correct);
+}
+
 .swatch-err {
   width: 7px;
   height: 7px;
@@ -1088,7 +1170,8 @@ body.is-typing-active.has-keymap-open .typing-stage {
   height: 220px;
 }
 
-#results-chart {
+#results-chart,
+#trend-chart {
   width: 100%;
   height: 100%;
   display: block;
@@ -1116,7 +1199,304 @@ body.is-typing-active.has-keymap-open .typing-stage {
 }
 
 /* ==========================================================================
-   Passages Library View
+   Performance Dashboard: Profile, Weak Keys & Achievements
+   ========================================================================== */
+
+.profile-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 20px 24px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-hover);
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+
+.profile-name-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.profile-status-text {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.profile-sub-meta {
+  margin-top: 3px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.dashboard-block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.block-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.block-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.block-desc {
+  margin-top: 2px;
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+/* Weak Keys Split: Heatmap + Ranked List */
+.weak-keys-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(260px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.heatmap-panel,
+.weak-list-panel {
+  padding: 18px 20px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-top: 6px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.heat-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.heat-dot-clean {
+  background-color: rgba(52, 211, 153, 0.35);
+}
+
+.heat-dot-low {
+  background-color: rgba(245, 158, 11, 0.45);
+}
+
+.heat-dot-med {
+  background-color: rgba(245, 158, 11, 0.8);
+}
+
+.heat-dot-high {
+  background-color: rgba(248, 113, 113, 0.85);
+}
+
+.weak-list-title {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.weak-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+
+.weak-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.weak-row-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.weak-glyph {
+  min-width: 30px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 5px;
+  background-color: var(--accent-error-soft);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  color: var(--text-primary);
+  font-family: var(--font-hindi), var(--font-mono);
+  font-size: 0.92rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.weak-key-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.weak-key-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.weak-key-counts {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.weak-err-rate {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent-error);
+}
+
+.weak-empty-note {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+  padding: 12px 0;
+}
+
+/* Achievements Grid */
+.achievements-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ach-card {
+  padding: 16px 18px;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0.7;
+}
+
+.ach-card.is-unlocked {
+  opacity: 1;
+  border-color: var(--border-strong);
+}
+
+.ach-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.ach-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ach-status {
+  font-size: 0.72rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ach-card.is-unlocked .ach-status {
+  color: var(--accent-correct);
+}
+
+.ach-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.ach-bar {
+  width: 100%;
+  height: 3px;
+  background-color: var(--bg-canvas);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: auto;
+}
+
+.ach-bar-fill {
+  height: 100%;
+  background-color: var(--text-muted);
+}
+
+.ach-card.is-unlocked .ach-bar-fill {
+  background-color: var(--accent-correct);
+}
+
+/* ==========================================================================
+   Passages Library & History Table
    ========================================================================== */
 
 .section-header {
@@ -1213,10 +1593,6 @@ body.is-typing-active.has-keymap-open .typing-stage {
   color: var(--text-primary);
   font-weight: 600;
 }
-
-/* ==========================================================================
-   History & Personal Bests View
-   ========================================================================== */
 
 .history-controls {
   display: flex;
@@ -1315,6 +1691,10 @@ body.is-typing-active.has-keymap-open .typing-stage {
   font-weight: 600;
 }
 
+.data-table .cell-right {
+  color: var(--accent-correct);
+}
+
 .data-table .cell-error {
   color: var(--accent-error);
 }
@@ -1343,7 +1723,7 @@ body.is-typing-active.has-keymap-open .typing-stage {
 }
 
 .empty-state {
-  padding: 56px 24px;
+  padding: 48px 24px;
   text-align: center;
   background-color: var(--bg-surface);
   border: 1px solid var(--border-subtle);
@@ -1361,14 +1741,14 @@ body.is-typing-active.has-keymap-open .typing-stage {
 }
 
 .empty-desc {
-  max-width: 420px;
+  max-width: 440px;
   font-size: 0.875rem;
   color: var(--text-secondary);
   margin-bottom: 8px;
 }
 
 /* ==========================================================================
-   Custom Text Modal
+   Modals & Offline Connectivity Notice
    ========================================================================== */
 
 .modal-backdrop {
@@ -1392,6 +1772,10 @@ body.is-typing-active.has-keymap-open .typing-stage {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.modal-dialog-sm {
+  max-width: 430px;
 }
 
 .modal-header {
@@ -1468,6 +1852,77 @@ body.is-typing-active.has-keymap-open .typing-stage {
   color: var(--accent-error);
 }
 
+.auth-note {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.checkbox-row input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--text-primary);
+}
+
+.auth-submit-row {
+  padding-top: 4px;
+}
+
+.signedin-summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  background-color: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.signedin-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.signedin-meta {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.signedin-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ios-steps {
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.ios-steps strong {
+  color: var(--text-primary);
+}
+
 .modal-footer {
   display: flex;
   align-items: center;
@@ -1475,6 +1930,20 @@ body.is-typing-active.has-keymap-open .typing-stage {
   gap: 10px;
   padding: 14px 22px;
   border-top: 1px solid var(--border-subtle);
+}
+
+.offline-banner {
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  z-index: 40;
+  padding: 8px 14px;
+  background-color: var(--bg-surface-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
 /* ==========================================================================
@@ -1495,6 +1964,14 @@ body.is-typing-active.has-keymap-open .typing-stage {
     border-bottom: 1px solid var(--border-subtle);
   }
 
+  .weak-keys-split {
+    grid-template-columns: 1fr;
+  }
+
+  .achievements-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .passages-grid {
     grid-template-columns: 1fr;
   }
@@ -1507,7 +1984,7 @@ body.is-typing-active.has-keymap-open .typing-stage {
 @media (max-width: 720px) {
   .top-bar {
     padding: 14px 16px;
-    gap: 16px;
+    gap: 14px;
   }
 
   .top-nav {
@@ -1530,7 +2007,8 @@ body.is-typing-active.has-keymap-open .typing-stage {
     font-size: 1.45rem;
   }
 
-  .pb-grid {
+  .pb-grid,
+  .achievements-grid {
     grid-template-columns: 1fr;
   }
 

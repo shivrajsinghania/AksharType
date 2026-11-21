@@ -1,7 +1,5 @@
 /**
- * AksharType — Interactive On-Screen Keyboard Layout Guide
- * Displays Normal & Shift legends for English, Mangal InScript, Mangal Remington Gail, and Kruti Dev 010.
- * Highlights the next required key (and Shift modifier) in real time and flashes pressed keys.
+ * AksharType — Interactive On-Screen Keyboard Layout Guide & Weak-Keys Heatmap Renderer
  */
 
 import { LAYOUTS, PHYSICAL_ROWS, getKeycapMap } from './keymaps.js';
@@ -17,12 +15,15 @@ export class KeyboardGuide {
   }
 
   render(layoutId) {
+    if (!this.gridEl) return;
     this.currentLayout = layoutId;
     const layout = LAYOUTS[layoutId] || LAYOUTS.english;
     const map = getKeycapMap(layoutId);
     const isEnglish = !layout.isHindi;
 
-    this.titleEl.textContent = `${layout.name} Keymap`;
+    if (this.titleEl) {
+      this.titleEl.textContent = `${layout.name} Keymap`;
+    }
     this.gridEl.innerHTML = '';
     this.keyElements.clear();
     this.shiftElements = [];
@@ -32,7 +33,6 @@ export class KeyboardGuide {
       const rowEl = document.createElement('div');
       rowEl.className = 'kb-row';
 
-      // Left row modifiers for realistic staggered feel
       if (rowIdx === 1) {
         rowEl.appendChild(this._makeModifier('Tab', 'is-wide-sm'));
       } else if (rowIdx === 2) {
@@ -79,7 +79,6 @@ export class KeyboardGuide {
         this.keyElements.set(normal, keyEl);
       }
 
-      // Right row modifiers
       if (rowIdx === 0) {
         rowEl.appendChild(this._makeModifier('Locked', 'is-wide-md'));
       } else if (rowIdx === 2) {
@@ -93,7 +92,6 @@ export class KeyboardGuide {
       this.gridEl.appendChild(rowEl);
     });
 
-    // Bottom Spacebar Row
     const bottomRow = document.createElement('div');
     bottomRow.className = 'kb-row';
     bottomRow.appendChild(this._makeModifier('Ctrl', 'is-wide-sm'));
@@ -117,9 +115,6 @@ export class KeyboardGuide {
     return el;
   }
 
-  /**
-   * Highlight the target key (and Shift if required) for the upcoming keystroke.
-   */
   highlightTarget(keyInfo) {
     for (const el of this.keyElements.values()) {
       el.classList.remove('is-target');
@@ -148,9 +143,6 @@ export class KeyboardGuide {
     }
   }
 
-  /**
-   * Flash the physically pressed key briefly on screen.
-   */
   flashKey(eventKey) {
     let targetEl = null;
     if (eventKey === ' ') {
@@ -173,4 +165,128 @@ export class KeyboardGuide {
       targetEl.classList.remove('is-pressed');
     }, 110);
   }
+}
+
+/**
+ * Render a Weak-Keys Keyboard Heatmap for the Performance Dashboard.
+ */
+export function renderWeakKeyHeatmap(containerEl, layoutId, byPhysicalKey, statusLabelEl) {
+  if (!containerEl) return;
+  const layout = LAYOUTS[layoutId] || LAYOUTS.english;
+  const map = getKeycapMap(layoutId);
+  const isEnglish = !layout.isHindi;
+
+  containerEl.innerHTML = '';
+
+  const applyHeatState = (keyEl, baseKey, label) => {
+    const stats = byPhysicalKey[baseKey];
+    if (!stats || stats.total === 0) {
+      keyEl.title = `${label}: No attempts yet`;
+      return;
+    }
+    const err = stats.errorRate;
+    if (stats.misses === 0) {
+      keyEl.classList.add('heat-clean');
+    } else if (err < 10) {
+      keyEl.classList.add('heat-low');
+    } else if (err < 25) {
+      keyEl.classList.add('heat-med');
+    } else {
+      keyEl.classList.add('heat-high');
+    }
+    const detail = `${label} — ${stats.misses} mistakes / ${stats.total} hits (${err}% error)`;
+    keyEl.title = detail;
+    keyEl.addEventListener('mouseenter', () => {
+      if (statusLabelEl) statusLabelEl.textContent = detail;
+    });
+  };
+
+  PHYSICAL_ROWS.forEach((row, rowIdx) => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'kb-row';
+
+    if (rowIdx === 1) {
+      const m = document.createElement('div');
+      m.className = 'kb-key is-modifier is-wide-sm';
+      m.textContent = 'Tab';
+      rowEl.appendChild(m);
+    } else if (rowIdx === 2) {
+      const m = document.createElement('div');
+      m.className = 'kb-key is-modifier is-wide-md';
+      m.textContent = 'Caps';
+      rowEl.appendChild(m);
+    } else if (rowIdx === 3) {
+      const m = document.createElement('div');
+      m.className = 'kb-key is-modifier is-wide-lg';
+      m.textContent = 'Shift';
+      rowEl.appendChild(m);
+    }
+
+    for (const [normal, shifted] of row) {
+      const keyEl = document.createElement('div');
+      keyEl.className = `kb-key kb-heat-key${isEnglish ? ' is-english' : ''}`;
+
+      const stats = byPhysicalKey[normal];
+      const topRow = document.createElement('div');
+      topRow.className = 'kb-key-top';
+
+      const leftSpan = document.createElement('span');
+      leftSpan.className = 'kb-key-qwerty';
+      leftSpan.textContent = isEnglish ? '' : normal;
+
+      const rightSpan = document.createElement('span');
+      rightSpan.className = 'kb-heat-pct tabular-nums';
+      rightSpan.textContent = stats && stats.misses > 0 ? `${stats.errorRate}%` : '';
+
+      topRow.appendChild(leftSpan);
+      topRow.appendChild(rightSpan);
+
+      const mainLabel = document.createElement('div');
+      mainLabel.className = 'kb-key-main';
+      mainLabel.textContent = isEnglish
+        ? normal.toUpperCase()
+        : (map && map[normal]) || normal;
+
+      keyEl.appendChild(topRow);
+      keyEl.appendChild(mainLabel);
+
+      const humanLabel = isEnglish
+        ? normal.toUpperCase()
+        : `${(map && map[normal]) || normal} (${normal.toUpperCase()})`;
+      applyHeatState(keyEl, normal, humanLabel);
+
+      rowEl.appendChild(keyEl);
+    }
+
+    if (rowIdx === 0) {
+      const m = document.createElement('div');
+      m.className = 'kb-key is-modifier is-wide-md';
+      m.textContent = 'Locked';
+      rowEl.appendChild(m);
+    } else if (rowIdx === 2) {
+      const m = document.createElement('div');
+      m.className = 'kb-key is-modifier is-wide-md';
+      m.textContent = 'Enter';
+      rowEl.appendChild(m);
+    } else if (rowIdx === 3) {
+      const m = document.createElement('div');
+      m.className = 'kb-key is-modifier is-wide-lg';
+      m.textContent = 'Shift';
+      rowEl.appendChild(m);
+    }
+
+    containerEl.appendChild(rowEl);
+  });
+
+  // Spacebar row
+  const bottomRow = document.createElement('div');
+  bottomRow.className = 'kb-row';
+  const spaceEl = document.createElement('div');
+  spaceEl.className = 'kb-key kb-heat-key is-spacebar is-modifier';
+  const spaceStats = byPhysicalKey[' '];
+  spaceEl.textContent =
+    spaceStats && spaceStats.misses > 0 ? `Space · ${spaceStats.errorRate}% err` : 'Space';
+  applyHeatState(spaceEl, ' ', 'Space');
+  bottomRow.appendChild(spaceEl);
+  containerEl.appendChild(bottomRow);
 }

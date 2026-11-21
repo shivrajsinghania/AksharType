@@ -6,15 +6,22 @@
     <title>AksharType — Hindi (मंगल &amp; कृति देव) &amp; English Typing Practice</title>
     <meta
       name="description"
-      content="A lightweight, 100% client-side dark-themed typing practice web app for English and Hindi (Mangal and Kruti Dev 010)."
+      content="A lightweight, 100% offline-capable dark-themed typing practice PWA for English and Hindi (Mangal and Kruti Dev 010) with local accounts and weak-key analytics."
     />
     <meta property="og:title" content="AksharType — Hindi &amp; English Typing Practice" />
     <meta
       property="og:description"
-      content="Practice English, Hindi Mangal, and Kruti Dev 010 with real-time WPM, accuracy tracking, and full-screen focus mode."
+      content="Practice English, Hindi Mangal, and Kruti Dev 010 offline with real-time WPM, accuracy tracking, local accounts, and weak-key diagnostics."
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="AksharType" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -25,7 +32,7 @@
   </head>
   <body>
     <div class="app-shell">
-      <!-- Top Navigation Bar (Strict 3-Zone Contract; hidden automatically while typing) -->
+      <!-- Top Navigation Bar (Strict 3-Zone Contract; hides automatically while typing) -->
       <header class="top-bar" id="top-bar">
         <a href="#practice" class="brand-wordmark" id="brand-home" aria-label="AksharType Home">
           AksharType
@@ -34,14 +41,19 @@
         <nav class="top-nav" aria-label="Primary Navigation">
           <button type="button" class="nav-link is-active" data-view="practice">Practice</button>
           <button type="button" class="nav-link" data-view="passages">Passages</button>
-          <button type="button" class="nav-link" data-view="history">History</button>
+          <button type="button" class="nav-link" data-view="performance">Performance</button>
           <button type="button" class="nav-link" id="nav-keymap-toggle" aria-pressed="false">
             Keymap
           </button>
         </nav>
 
         <div class="top-actions">
-          <button type="button" class="btn-primary" id="open-custom-text-btn">Custom Text</button>
+          <button type="button" class="btn-secondary is-hidden" id="pwa-install-btn">
+            Install App
+          </button>
+          <button type="button" class="btn-primary" id="account-trigger-btn">
+            Create Account
+          </button>
         </div>
       </header>
 
@@ -200,6 +212,7 @@
               </div>
 
               <div class="stage-actions">
+                <button type="button" class="btn-ghost" id="open-custom-text-btn">Custom Text</button>
                 <button type="button" class="btn-ghost" id="btn-next-passage">Next Passage</button>
                 <button type="button" class="btn-secondary" id="btn-restart" title="Restart current session (Tab)">
                   Restart <kbd class="kbd-hint">Tab</kbd>
@@ -252,7 +265,7 @@
               <div class="kpi-cell">
                 <span class="kpi-label">Characters</span>
                 <span class="kpi-value tabular-nums" id="res-chars-total">0</span>
-                <span class="kpi-sub tabular-nums" id="res-chars-breakdown">0 correct &middot; 0 mistakes</span>
+                <span class="kpi-sub tabular-nums" id="res-chars-breakdown">0 right &middot; 0 wrong</span>
               </div>
               <div class="kpi-cell">
                 <span class="kpi-label">Duration</span>
@@ -280,7 +293,7 @@
             <div class="results-actions">
               <button type="button" class="btn-primary" id="res-retry-btn">Practice Again</button>
               <button type="button" class="btn-secondary" id="res-next-btn">Next Passage</button>
-              <button type="button" class="btn-ghost" id="res-history-btn">View History</button>
+              <button type="button" class="btn-ghost" id="res-performance-btn">Open Performance</button>
             </div>
           </div>
         </section>
@@ -294,68 +307,288 @@
                 Select a curated English or Hindi passage, or paste your own text.
               </p>
             </div>
-            <div class="segmented-control" id="passage-filter">
-              <button type="button" class="seg-btn is-active" data-lang-filter="all">All</button>
-              <button type="button" class="seg-btn" data-lang-filter="english">English</button>
-              <button type="button" class="seg-btn seg-btn-hindi" data-lang-filter="hindi">हिन्दी (मंगल / कृति देव)</button>
+            <div class="history-controls">
+              <div class="segmented-control" id="passage-filter">
+                <button type="button" class="seg-btn is-active" data-lang-filter="all">All</button>
+                <button type="button" class="seg-btn" data-lang-filter="english">English</button>
+                <button type="button" class="seg-btn seg-btn-hindi" data-lang-filter="hindi">हिन्दी (मंगल / कृति देव)</button>
+              </div>
+              <button type="button" class="btn-secondary" id="passages-custom-btn">Custom Text</button>
             </div>
           </div>
 
           <div class="passages-grid" id="passages-grid"></div>
         </section>
 
-        <!-- ===================== VIEW 3: HISTORY ===================== -->
-        <section id="view-history" class="view-section" aria-label="Typing History and Personal Bests">
-          <div class="section-header">
-            <div>
-              <h1 class="section-title">History &amp; Personal Bests</h1>
-              <p class="section-desc">
-                All results are stored locally in your browser.
-              </p>
-            </div>
-            <div class="history-controls">
-              <div class="segmented-control" id="history-filter">
-                <button type="button" class="seg-btn is-active" data-history-layout="all">All</button>
-                <button type="button" class="seg-btn" data-history-layout="english">English</button>
-                <button type="button" class="seg-btn seg-btn-hindi" data-history-layout="mangal">मंगल</button>
-                <button type="button" class="seg-btn seg-btn-hindi" data-history-layout="kruti-dev">कृति देव</button>
+        <!-- ===================== VIEW 3: UNIFIED PERFORMANCE DASHBOARD ===================== -->
+        <section id="view-performance" class="view-section" aria-label="Performance Dashboard">
+          <!-- Profile & Scope Bar -->
+          <div class="profile-banner">
+            <div class="profile-identity">
+              <div class="profile-avatar" id="profile-avatar" aria-hidden="true">G</div>
+              <div class="profile-info">
+                <div class="profile-name-row">
+                  <h1 class="profile-name" id="profile-username">Guest Profile</h1>
+                  <span class="meta-sep" aria-hidden="true">&middot;</span>
+                  <span class="profile-status-text" id="profile-member-meta">Local browser session</span>
+                </div>
+                <div class="profile-sub-meta" id="profile-summary-line">
+                  0 tests completed &middot; 0m practiced &middot; 0-day streak
+                </div>
               </div>
-              <button type="button" class="btn-ghost btn-danger-text" id="clear-history-btn">Clear History</button>
+            </div>
+
+            <div class="profile-actions">
+              <div class="segmented-control" id="perf-layout-filter">
+                <button type="button" class="seg-btn is-active" data-perf-layout="all">All</button>
+                <button type="button" class="seg-btn" data-perf-layout="english">English</button>
+                <button type="button" class="seg-btn seg-btn-hindi" data-perf-layout="mangal">मंगल</button>
+                <button type="button" class="seg-btn seg-btn-hindi" data-perf-layout="kruti-dev">कृति देव</button>
+              </div>
+              <button type="button" class="btn-secondary" id="profile-account-btn">Create Account</button>
             </div>
           </div>
 
-          <!-- Personal Bests Strip -->
-          <div class="pb-grid" id="pb-grid"></div>
-
-          <!-- Session Log Table -->
-          <div class="table-wrap" id="history-table-wrap">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Layout</th>
-                  <th>Mode</th>
-                  <th>Passage</th>
-                  <th class="num-col">Net WPM</th>
-                  <th class="num-col">Accuracy</th>
-                  <th class="num-col">Mistakes</th>
-                  <th class="action-col"></th>
-                </tr>
-              </thead>
-              <tbody id="history-tbody"></tbody>
-            </table>
+          <!-- 4-Column Mathematical All-Test KPI Grid -->
+          <div class="results-kpi-grid">
+            <div class="kpi-cell">
+              <span class="kpi-label">Weighted Avg WPM</span>
+              <span class="kpi-value kpi-value-hero tabular-nums" id="perf-avg-wpm">0.0</span>
+              <span class="kpi-sub tabular-nums" id="perf-wpm-delta">Best 0 WPM</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-label">Weighted Accuracy</span>
+              <span class="kpi-value tabular-nums" id="perf-avg-acc">0.0%</span>
+              <span class="kpi-sub tabular-nums" id="perf-acc-sub">Across all keystrokes</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-label">Right vs. Wrong</span>
+              <span class="kpi-value tabular-nums" id="perf-right-wrong">0 / 0</span>
+              <div class="ratio-bar" aria-hidden="true">
+                <div class="ratio-bar-right" id="perf-ratio-right"></div>
+                <div class="ratio-bar-wrong" id="perf-ratio-wrong"></div>
+              </div>
+              <span class="kpi-sub tabular-nums" id="perf-rw-sub">0% right &middot; 0% wrong</span>
+            </div>
+            <div class="kpi-cell">
+              <span class="kpi-label">Tests &amp; Streak</span>
+              <span class="kpi-value tabular-nums" id="perf-tests-count">0</span>
+              <span class="kpi-sub tabular-nums" id="perf-streak-sub">0-day streak &middot; 0 words</span>
+            </div>
           </div>
 
-          <!-- Empty History State -->
-          <div class="empty-state is-hidden" id="history-empty">
-            <p class="empty-title">No completed sessions yet</p>
-            <p class="empty-desc">
-              Finish a timed or page-based typing run to record your WPM, accuracy, and personal bests.
-            </p>
-            <button type="button" class="btn-primary" id="empty-start-btn">Start Practicing</button>
+          <!-- All-Time WPM & Accuracy Trend Chart -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <span class="chart-title">All-Time WPM &amp; Accuracy Trend</span>
+              <div class="chart-legend">
+                <span class="legend-item"><span class="legend-swatch swatch-net"></span>Net WPM</span>
+                <span class="legend-item"><span class="legend-swatch swatch-acc"></span>Accuracy %</span>
+              </div>
+            </div>
+            <div class="chart-container" id="trend-chart-container">
+              <canvas id="trend-chart" aria-label="All-time WPM and accuracy trend chart"></canvas>
+              <div class="chart-tooltip is-hidden" id="trend-tooltip"></div>
+            </div>
+          </div>
+
+          <!-- Weak Keys Diagnostics & One-Click Drill -->
+          <div class="dashboard-block">
+            <div class="block-header">
+              <div>
+                <h2 class="block-title">Weak Keys &amp; Mistake Heatmap</h2>
+                <p class="block-desc" id="heatmap-hover-detail">
+                  Hover any key to inspect your real error rate across completed sessions.
+                </p>
+              </div>
+              <div class="history-controls">
+                <div class="segmented-control" id="heatmap-layout-selector">
+                  <button type="button" class="seg-btn is-active" data-heat-layout="english">English</button>
+                  <button type="button" class="seg-btn seg-btn-hindi" data-heat-layout="mangal">मंगल</button>
+                  <button type="button" class="seg-btn seg-btn-hindi" data-heat-layout="kruti-dev">कृति देव</button>
+                </div>
+                <button type="button" class="btn-primary" id="practice-weak-keys-btn">
+                  Practice Weak Keys
+                </button>
+              </div>
+            </div>
+
+            <div class="weak-keys-split">
+              <!-- Visual Keyboard Heatmap -->
+              <div class="heatmap-panel">
+                <div class="keyboard-grid" id="heatmap-keyboard-grid"></div>
+                <div class="heatmap-legend">
+                  <span class="legend-item"><span class="heat-dot heat-dot-clean"></span>0% mistakes</span>
+                  <span class="legend-item"><span class="heat-dot heat-dot-low"></span>1–9% error</span>
+                  <span class="legend-item"><span class="heat-dot heat-dot-med"></span>10–24% error</span>
+                  <span class="legend-item"><span class="heat-dot heat-dot-high"></span>25%+ weak</span>
+                </div>
+              </div>
+
+              <!-- Ranked Top Weak Keys -->
+              <div class="weak-list-panel">
+                <div class="weak-list-title">Most Missed Keys</div>
+                <div class="weak-list" id="weak-keys-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Achievements Grid -->
+          <div class="dashboard-block">
+            <div class="block-header">
+              <div>
+                <h2 class="block-title">Achievements</h2>
+                <p class="block-desc" id="achievements-summary">0 of 9 unlocked</p>
+              </div>
+            </div>
+            <div class="achievements-grid" id="achievements-grid"></div>
+          </div>
+
+          <!-- Personal Bests by Layout -->
+          <div class="dashboard-block">
+            <div class="block-header">
+              <div>
+                <h2 class="block-title">Personal Bests &amp; Session History</h2>
+                <p class="block-desc">Every completed run logged locally on this device.</p>
+              </div>
+              <button type="button" class="btn-ghost btn-danger-text" id="clear-history-btn">
+                Clear History
+              </button>
+            </div>
+
+            <div class="pb-grid" id="pb-grid"></div>
+
+            <div class="table-wrap" id="history-table-wrap">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Layout</th>
+                    <th>Mode</th>
+                    <th>Passage</th>
+                    <th class="num-col">Net WPM</th>
+                    <th class="num-col">Accuracy</th>
+                    <th class="num-col">Right / Wrong</th>
+                    <th class="action-col"></th>
+                  </tr>
+                </thead>
+                <tbody id="history-tbody"></tbody>
+              </table>
+            </div>
+
+            <div class="empty-state is-hidden" id="history-empty">
+              <p class="empty-title">No completed sessions yet</p>
+              <p class="empty-desc">
+                Finish a timed or page-based typing run to unlock your trend chart, weak-key heatmap, and achievements.
+              </p>
+              <button type="button" class="btn-primary" id="empty-start-btn">Start Practicing</button>
+            </div>
           </div>
         </section>
       </main>
+    </div>
+
+    <!-- Quiet Offline Connectivity Indicator (shown only when browser is offline) -->
+    <div class="offline-banner is-hidden" id="offline-banner" role="status" aria-live="polite">
+      Offline Mode &middot; Core typing and local profile active
+    </div>
+
+    <!-- ===================== ACCOUNT / AUTH MODAL ===================== -->
+    <div class="modal-backdrop is-hidden" id="account-modal" role="dialog" aria-modal="true" aria-labelledby="account-modal-title">
+      <div class="modal-dialog modal-dialog-sm">
+        <div class="modal-header">
+          <h2 class="modal-title" id="account-modal-title">Local Account</h2>
+          <button type="button" class="btn-ghost btn-sm" id="close-account-modal-btn" aria-label="Close modal">Close</button>
+        </div>
+
+        <!-- Auth Forms (shown when signed out or switching account) -->
+        <div class="modal-body" id="auth-forms-view">
+          <div class="segmented-control segmented-full" id="auth-mode-tabs">
+            <button type="button" class="seg-btn is-active" data-auth-tab="signup">Create Account</button>
+            <button type="button" class="seg-btn" data-auth-tab="signin">Sign In</button>
+          </div>
+
+          <p class="auth-note">
+            Stored locally on this device with salted password hashing. Works 100% offline.
+          </p>
+
+          <form id="auth-form" class="auth-form" novalidate>
+            <div class="modal-field-row">
+              <label for="auth-username" class="field-label">Username</label>
+              <input
+                type="text"
+                id="auth-username"
+                class="text-input"
+                placeholder="e.g. aarav_types"
+                autocomplete="username"
+                maxlength="24"
+                required
+              />
+            </div>
+
+            <div class="modal-field-row">
+              <label for="auth-password" class="field-label">Password</label>
+              <input
+                type="password"
+                id="auth-password"
+                class="text-input"
+                placeholder="At least 6 characters"
+                autocomplete="current-password"
+                maxlength="128"
+                required
+              />
+            </div>
+
+            <div class="modal-field-row" id="auth-confirm-wrap">
+              <label for="auth-confirm-password" class="field-label">Confirm Password</label>
+              <input
+                type="password"
+                id="auth-confirm-password"
+                class="text-input"
+                placeholder="Re-enter password"
+                autocomplete="new-password"
+                maxlength="128"
+              />
+            </div>
+
+            <label class="checkbox-row is-hidden" id="import-guest-wrap">
+              <input type="checkbox" id="import-guest-checkbox" checked />
+              <span>Import my current guest typing history into this account</span>
+            </label>
+
+            <p class="field-error is-hidden" id="auth-error"></p>
+
+            <div class="auth-submit-row">
+              <button type="submit" class="btn-primary btn-full" id="auth-submit-btn">
+                Create Account
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Signed-In Profile Popover View -->
+        <div class="modal-body is-hidden" id="auth-signedin-view">
+          <div class="signedin-summary">
+            <div class="profile-avatar" id="modal-avatar">A</div>
+            <div>
+              <div class="signedin-name" id="modal-username">@user</div>
+              <div class="signedin-meta" id="modal-member-since">Local offline profile</div>
+            </div>
+          </div>
+
+          <div class="signedin-actions">
+            <button type="button" class="btn-primary btn-full" id="modal-go-performance-btn">
+              Open Performance Dashboard
+            </button>
+            <button type="button" class="btn-secondary btn-full" id="modal-switch-account-btn">
+              Switch or Create Another Account
+            </button>
+            <button type="button" class="btn-ghost btn-danger-text btn-full" id="modal-signout-btn">
+              Sign Out to Guest Mode
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ===================== CUSTOM TEXT MODAL ===================== -->
@@ -396,6 +629,26 @@
         <div class="modal-footer">
           <button type="button" class="btn-ghost" id="cancel-modal-btn">Cancel</button>
           <button type="button" class="btn-primary" id="apply-custom-text-btn">Load &amp; Practice</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================== iOS SAFARI INSTALL GUIDE MODAL ===================== -->
+    <div class="modal-backdrop is-hidden" id="ios-install-modal" role="dialog" aria-modal="true" aria-labelledby="ios-modal-title">
+      <div class="modal-dialog modal-dialog-sm">
+        <div class="modal-header">
+          <h2 class="modal-title" id="ios-modal-title">Install AksharType on iOS</h2>
+          <button type="button" class="btn-ghost btn-sm" id="close-ios-modal-btn">Close</button>
+        </div>
+        <div class="modal-body">
+          <p class="auth-note">
+            Install AksharType to your home screen for 100% offline typing access:
+          </p>
+          <ol class="ios-steps">
+            <li>Tap the <strong>Share</strong> icon in Safari's toolbar.</li>
+            <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+            <li>Tap <strong>Add</strong> in the top-right corner.</li>
+          </ol>
         </div>
       </div>
     </div>
