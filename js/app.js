@@ -265,29 +265,64 @@ const buddy = new BuddyController({
     }
     launchWeakKeysDrill();
   },
-  onLaunchCustomDrill: ({ title, text }) => {
+  onLaunchCustomDrill: ({ title, text, layout, durationMinutes }) => {
     const clean = String(text || '').replace(/\s+/g, ' ').trim();
     if (clean.length < 15) return;
+
     const hasDevanagari = /[\u0900-\u097F]/.test(clean);
     const detectedLang = hasDevanagari ? 'hindi' : 'english';
-    state.currentPassage = {
-      id: `kibo-drill-${Date.now()}`,
-      language: detectedLang,
-      category: 'Kibo Drill',
-      title: title || 'Kibo Custom Drill',
-      text: clean,
-      isCustom: true,
-    };
-    const currentLayout = LAYOUTS[prefs.layout] || LAYOUTS.english;
-    if (detectedLang === 'hindi' && !currentLayout.isHindi) {
-      prefs.layout = 'mangal';
-      savePrefs(prefs);
-      syncConfigUI();
-    } else if (detectedLang === 'english' && currentLayout.isHindi) {
-      prefs.layout = 'english';
+
+    let targetLayout = prefs.layout;
+    if (layout && LAYOUTS[layout]) {
+      const requestedIsHindi = LAYOUTS[layout].isHindi;
+      if ((detectedLang === 'hindi' && requestedIsHindi) || (detectedLang === 'english' && !requestedIsHindi)) {
+        targetLayout = layout;
+      } else {
+        targetLayout = detectedLang === 'hindi' ? 'mangal' : 'english';
+      }
+    } else {
+      const currentLayout = LAYOUTS[prefs.layout] || LAYOUTS.english;
+      if (detectedLang === 'hindi' && !currentLayout.isHindi) {
+        targetLayout = 'mangal';
+      } else if (detectedLang === 'english' && currentLayout.isHindi) {
+        targetLayout = 'english';
+      }
+    }
+
+    let prefsChanged = false;
+    if (targetLayout !== prefs.layout) {
+      prefs.layout = targetLayout;
+      prefsChanged = true;
+    }
+
+    const parsedMins = Number(durationMinutes);
+    if (Number.isFinite(parsedMins) && parsedMins >= 1 && parsedMins <= 15) {
+      const mins = Math.round(parsedMins);
+      prefs.testMode = 'time';
+      if (mins === 3 || mins === 5) {
+        prefs.isCustomTime = false;
+        prefs.durationMinutes = mins;
+      } else {
+        prefs.isCustomTime = true;
+        prefs.customMinutes = mins;
+      }
+      prefsChanged = true;
+    }
+
+    if (prefsChanged) {
       savePrefs(prefs);
       syncConfigUI();
     }
+
+    state.currentPassage = {
+      id: `kibo-drill-${Date.now()}`,
+      language: detectedLang,
+      category: 'Kibo Custom Test',
+      title: title || 'Kibo Custom Practice Test',
+      text: clean,
+      isCustom: true,
+    };
+
     switchView('practice');
     resetSession();
   },

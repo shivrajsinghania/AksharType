@@ -1,7 +1,7 @@
 /**
- * AksharType — Kibo AI Buddy Context Compressor, Language Tracker & Everyday Hindi Coach
- * Builds an ultra-token-efficient telemetry digest (~150-220 tokens) for Groq
- * and provides natural day-to-day Hindi diagnostics, startup greetings, and offline responses.
+ * AksharType — Kibo AI Buddy Context Compressor, Instant Language Detector & Expert Local Coach
+ * Builds a high-precision, token-efficient telemetry digest (~170-240 tokens) for Groq
+ * with exact per-key finger zones, instant English/Hindi language matching, and smart offline custom tests.
  */
 
 import { LAYOUTS } from './keymaps.js';
@@ -30,17 +30,21 @@ const FINGER_ZONES = {
   rightPinky: new Set(['0', '-', '=', 'p', '[', ']', '\\', ';', "'", '/']),
 };
 
+// Strictly unambiguous Romanized Hindi (Hinglish) words — never overlap with common English words like "me", "to", "ha"
 const HINGLISH_MARKERS = new Set([
-  'kya', 'hai', 'hain', 'nahi', 'nhi', 'kaise', 'karu', 'karun', 'karna', 'mera', 'meri', 'mere',
-  'bhai', 'yaar', 'dost', 'thik', 'theek', 'bata', 'batao', 'hoon', 'hun', 'hum', 'tum', 'aap',
-  'mein', 'me', 'se', 'par', 'aur', 'bhi', 'toh', 'to', 'achha', 'accha', 'haan', 'ha', 'kuch',
-  'bahut', 'bohot', 'kam', 'zyada', 'jyada', 'abhi', 'kal', 'aaj', 'chalo', 'karo', 'karke',
-  'galat', 'galti', 'sahi', 'naam', 'kitna', 'kitni', 'kyu', 'kyun', 'kyuki', 'phir', 'fir',
-  'lagta', 'lagti', 'samajh', 'padhai', 'taiyari', 'tyari', 'hindi', 'namaste', 'shukriya',
+  'kya', 'hai', 'hain', 'nahi', 'nhi', 'kaise', 'karu', 'karun', 'karna', 'karo', 'karke',
+  'mera', 'meri', 'mere', 'mujhe', 'mujhse', 'humara', 'hamara', 'tumhara', 'aapka', 'apna',
+  'bhai', 'yaar', 'dost', 'thik', 'theek', 'bata', 'batao', 'bataiye', 'hoon', 'hun', 'hum',
+  'tum', 'aap', 'mein', 'aur', 'bhi', 'toh', 'achha', 'accha', 'haan', 'kuch', 'bahut',
+  'bohot', 'kam', 'zyada', 'jyada', 'abhi', 'kal', 'aaj', 'chalo', 'galat', 'galti', 'galtiyan',
+  'sahi', 'naam', 'kitna', 'kitni', 'kyu', 'kyun', 'kyuki', 'kyunki', 'phir', 'fir', 'lagta',
+  'lagti', 'samajh', 'padhai', 'taiyari', 'tyari', 'namaste', 'shukriya', 'dhanyavad', 'bana',
+  'banao', 'banaiye', 'sikhao', 'sikha', 'tez', 'dheere', 'ungli', 'matra', 'pichla', 'agla',
+  'kaise', 'kahan', 'kab', 'kaun', 'kaisa', 'kaisi', 'wala', 'wali', 'wale', 'chahiye',
 ]);
 
 function getFingerZone(keyLabel) {
-  const clean = String(keyLabel || '').replace(/^Shift\+/i, '').toLowerCase();
+  const clean = String(keyLabel || '').replace(/^Shift\+/i, '').toLowerCase().trim();
   if (clean === 'space') return 'thumb';
   for (const [zone, set] of Object.entries(FINGER_ZONES)) {
     if (set.has(clean)) return zone;
@@ -48,17 +52,33 @@ function getFingerZone(keyLabel) {
   return 'reach';
 }
 
+function zoneTagForPrompt(zone) {
+  const map = {
+    leftPinky: 'left-pinky',
+    leftRing: 'left-ring',
+    leftMiddle: 'left-middle',
+    leftIndex: 'left-index',
+    rightIndex: 'right-index',
+    rightMiddle: 'right-middle',
+    rightRing: 'right-ring',
+    rightPinky: 'right-pinky',
+    thumb: 'thumb',
+    reach: 'outer-reach',
+  };
+  return map[zone] || 'outer-reach';
+}
+
 function humanizeZoneHindi(zone) {
   const labels = {
-    leftPinky: 'बाएँ हाथ की छोटी उंगली (left pinky)',
-    leftRing: 'बाएँ हाथ की ring finger',
-    leftMiddle: 'बाएँ हाथ की middle finger',
-    leftIndex: 'left index finger',
-    rightIndex: 'right index finger',
-    rightMiddle: 'दाएँ हाथ की middle finger',
-    rightRing: 'दाएँ हाथ की ring finger',
-    rightPinky: 'दाएँ हाथ की छोटी उंगली (right pinky)',
-    thumb: 'अंगूठा (Space timing)',
+    leftPinky: 'बाएँ हाथ की छोटी उंगली (Left Pinky)',
+    leftRing: 'बाएँ हाथ की Ring Finger',
+    leftMiddle: 'बाएँ हाथ की Middle Finger',
+    leftIndex: 'बाएँ हाथ की Index Finger',
+    rightIndex: 'दाएँ हाथ की Index Finger',
+    rightMiddle: 'दाएँ हाथ की Middle Finger',
+    rightRing: 'दाएँ हाथ की Ring Finger',
+    rightPinky: 'दाएँ हाथ की छोटी उंगली (Right Pinky)',
+    thumb: 'अंगूठा (Spacebar timing)',
     reach: 'किनारे वाली keys',
   };
   return labels[zone] || 'किनारे वाली keys';
@@ -69,60 +89,57 @@ function humanizeZoneEnglish(zone) {
     leftPinky: 'left pinky',
     leftRing: 'left ring finger',
     leftMiddle: 'left middle finger',
-    leftIndex: 'left index',
-    rightIndex: 'right index',
+    leftIndex: 'left index finger',
+    rightIndex: 'right index finger',
     rightMiddle: 'right middle finger',
     rightRing: 'right ring finger',
     rightPinky: 'right pinky',
-    thumb: 'thumb (Space timing)',
+    thumb: 'thumb (Spacebar timing)',
     reach: 'outer key reach',
   };
   return labels[zone] || 'key reach';
 }
 
 /**
- * Detect whether a single user message is pure English (not Devanagari and not Hinglish).
+ * Detect whether a single user message is English (not Devanagari and not Hinglish).
  */
 export function isPureEnglishMessage(text) {
   const str = String(text || '').trim();
   if (!str) return false;
   if (/[\u0900-\u097F]/.test(str)) return false;
+
   const words = str
     .toLowerCase()
     .replace(/[^a-z\s]/g, ' ')
     .split(/\s+/)
     .filter(Boolean);
+
   if (words.length === 0) return false;
+
+  let hinglishHits = 0;
   for (const w of words) {
-    if (HINGLISH_MARKERS.has(w)) return false;
-  }
-  return true;
-}
-
-/**
- * Default language is ALWAYS friendly everyday Hindi.
- * Switches to English ONLY when the user has sent 3 or more consecutive pure-English messages.
- */
-export function detectBuddyLanguage(chatHistory) {
-  const userMsgs = (Array.isArray(chatHistory) ? chatHistory : [])
-    .filter((m) => m && m.role === 'user' && typeof m.content === 'string')
-    .slice(-4);
-
-  if (userMsgs.length < 3) return 'hindi';
-
-  let consecutiveEnglish = 0;
-  for (let i = userMsgs.length - 1; i >= 0; i -= 1) {
-    if (isPureEnglishMessage(userMsgs[i].content)) {
-      consecutiveEnglish += 1;
-    } else {
-      break;
+    if (HINGLISH_MARKERS.has(w)) {
+      hinglishHits += 1;
     }
   }
-  return consecutiveEnglish >= 3 ? 'english' : 'hindi';
+  return hinglishHits === 0;
 }
 
 /**
- * Derive a clean, friendly first-name style display name from user profile or custom preference.
+ * Instant turn-level language detection:
+ * - Default is natural everyday Hindi when no message has been sent yet.
+ * - Immediately responds in English whenever the user writes in English.
+ * - Immediately responds in Hindi whenever the user writes in Hindi or Hinglish.
+ */
+export function detectTurnLanguage(latestMessage, fallbackLang = 'hindi') {
+  const clean = String(latestMessage || '').trim();
+  if (!clean) return fallbackLang === 'english' ? 'english' : 'hindi';
+  if (/[\u0900-\u097F]/.test(clean)) return 'hindi';
+  return isPureEnglishMessage(clean) ? 'english' : 'hindi';
+}
+
+/**
+ * Derive a clean, friendly display name from user profile or saved buddy preference.
  */
 export function resolveUserFriendlyName() {
   const buddy = loadBuddyState();
@@ -138,18 +155,19 @@ export function resolveUserFriendlyName() {
 }
 
 /**
- * Time-of-day friendly everyday Hindi greeting.
+ * Time-of-day natural, respectful Hindi greeting.
  */
 export function getTimeGreeting(userName) {
   const hr = new Date().getHours();
-  if (hr >= 5 && hr < 12) return `गुड मॉर्निंग ${userName}!`;
-  if (hr >= 12 && hr < 17) return `गुड आफ्टरनून ${userName}!`;
-  if (hr >= 17 && hr < 21) return `गुड ईवनिंग ${userName}!`;
-  return `अरे वाह ${userName}, लेट नाइट प्रैक्टिस?`;
+  const isGuestName = userName === 'दोस्त';
+  if (hr >= 5 && hr < 12) return isGuestName ? 'गुड मॉर्निंग!' : `गुड मॉर्निंग, ${userName}!`;
+  if (hr >= 12 && hr < 17) return isGuestName ? 'गुड आफ्टरनून!' : `गुड आफ्टरनून, ${userName}!`;
+  if (hr >= 17 && hr < 21) return isGuestName ? 'गुड ईवनिंग!' : `गुड ईवनिंग, ${userName}!`;
+  return isGuestName ? 'लेट नाइट प्रैक्टिस?' : `लेट नाइट प्रैक्टिस, ${userName}?`;
 }
 
 /**
- * Build an enthusiastic, curious startup popup greeting based on live user data.
+ * Build an enthusiastic, curious, respectful startup popup greeting based on live user data.
  */
 export function buildStartupGreeting(ctx) {
   const { userName, overall, scoped, patterns, buddy } = ctx;
@@ -158,11 +176,11 @@ export function buildStartupGreeting(ctx) {
   if (!navigator.onLine) {
     return {
       mood: 'concerned',
-      title: `अरे ${userName}, इंटरनेट बंद है क्या?`,
-      body: 'तुमने internet बंद किया है क्या, या WiFi connect नहीं है? कोई बात नहीं—typing प्रैक्टिस offline भी मस्त चलेगी!',
-      primaryLabel: 'चलो टेस्ट लगाएँ',
+      title: 'इंटरनेट बंद है क्या?',
+      body: 'लगता है internet बंद है या WiFi connect नहीं है। कोई बात नहीं—typing प्रैक्टिस offline भी बिल्कुल स्मूद चलेगी!',
+      primaryLabel: 'टेस्ट शुरू करें',
       primaryAction: 'practice',
-      secondaryLabel: 'Kibo से बात करो',
+      secondaryLabel: 'Kibo खोलें',
       secondaryAction: 'chat',
     };
   }
@@ -171,14 +189,14 @@ export function buildStartupGreeting(ctx) {
   if (overall.totalTests === 0) {
     return {
       mood: 'happy',
-      title: `${greeting} मैं Kibo हूँ!`,
-      body: 'चलो आज का पहला 3-min टेस्ट मारें? वैसे तुम किस exam (SSC/CPCT) या काम के लिए typing सीख रहे हो?',
-      primaryLabel: 'Exam की तैयारी है',
+      title: `${greeting} मैं Kibo हूँ`,
+      body: 'आज एक छोटा 3-min टेस्ट लगाकर शुरुआत करें? आप किस exam (SSC/CPCT) या goal के लिए typing सीख रहे हैं?',
+      primaryLabel: 'Exam की तैयारी',
       primaryAction: 'chat-prompt',
-      primaryPrompt: 'मैं exam के लिए typing की तैयारी कर रहा हूँ, मुझे सही plan बताओ!',
-      secondaryLabel: 'बस स्पीड बढ़ानी है',
+      primaryPrompt: 'मैं exam के लिए typing की तैयारी कर रहा हूँ, मुझे सही practice plan और custom test बताओ।',
+      secondaryLabel: 'स्पीड बढ़ानी है',
       secondaryAction: 'chat-prompt',
-      secondaryPrompt: 'मुझे बस अपनी typing speed और accuracy बढ़ानी है, कहाँ से शुरू करूँ?',
+      secondaryPrompt: 'मुझे अपनी typing speed और accuracy बढ़ानी है, कहाँ से शुरू करूँ?',
     };
   }
 
@@ -187,16 +205,16 @@ export function buildStartupGreeting(ctx) {
     const topChar = patterns.weakest[0].displayChar;
     const errRate = patterns.weakest[0].errorRate;
     const extraQ = !buddy.goal
-      ? 'वैसे तुम्हारा target WPM क्या है?'
-      : `तुम्हारे "${buddy.goal}" goal के लिए आज 3-min टेस्ट हो जाए?`;
+      ? 'वैसे आपका target WPM क्या है?'
+      : `"${buddy.goal}" के लिए आज 3-min का targeted drill करें?`;
     return {
       mood: 'coach',
       title: greeting,
-      body: `तुम्हारे "${topChar}" key पर ${errRate}% गलती हो रही है यार! ${extraQ} आओ chat में बताओ!`,
-      primaryLabel: `"${topChar}" ठीक करो`,
+      body: `आपकी "${topChar}" key पर ${errRate}% गलती हो रही है। ${extraQ} आइए chat में इसे फिक्स करते हैं।`,
+      primaryLabel: `"${topChar}" ठीक करें`,
       primaryAction: 'chat-prompt',
-      primaryPrompt: `मेरा "${topChar}" key बार-बार गलत क्यों हो रहा है? इसे कैसे ठीक करूँ?`,
-      secondaryLabel: 'Chat खोलो',
+      primaryPrompt: `मेरी "${topChar}" key बार-बार गलत क्यों हो रही है? सही finger और एक custom drill दो।`,
+      secondaryLabel: 'Chat खोलें',
       secondaryAction: 'chat',
     };
   }
@@ -205,12 +223,12 @@ export function buildStartupGreeting(ctx) {
   if (overall.streakDays >= 2) {
     return {
       mood: 'celebrate',
-      title: `${greeting} मस्त ${overall.streakDays}-day streak!`,
-      body: `अभी ${scoped.weightedAvgWpm} WPM चल रही है—चलो आज एक quick 3-min टेस्ट लगाकर नया PB तोड़ें?`,
-      primaryLabel: 'आज का Plan दो',
+      title: `${greeting} शानदार ${overall.streakDays}-day streak!`,
+      body: `अभी ${scoped.weightedAvgWpm} WPM चल रही है—आज एक quick 3-min टेस्ट लगाकर नया PB सेट करें?`,
+      primaryLabel: 'आज का Plan लें',
       primaryAction: 'chat-prompt',
-      primaryPrompt: 'आज के लिए मुझे एक बढ़िया 5 मिनट का typing plan दो!',
-      secondaryLabel: 'Chat खोलो',
+      primaryPrompt: 'आज के लिए मुझे एक बढ़िया 5 मिनट का structured typing plan दो।',
+      secondaryLabel: 'Chat खोलें',
       secondaryAction: 'chat',
     };
   }
@@ -218,12 +236,12 @@ export function buildStartupGreeting(ctx) {
   return {
     mood: 'happy',
     title: greeting,
-    body: `${overall.totalTests} टेस्ट हो चुके हैं (${overall.weightedAvgWpm} avg WPM)! आज English या Hindi किसमें प्रैक्टिस करने का मन है?`,
-    primaryLabel: 'आओ बात करते हैं',
+    body: `${overall.totalTests} टेस्ट पूरे हो चुके हैं (${overall.weightedAvgWpm} avg WPM)। आज English या Hindi किसमें प्रैक्टिस करना चाहेंगे?`,
+    primaryLabel: 'Kibo से बात करें',
     primaryAction: 'chat',
-    secondaryLabel: 'पिछला टेस्ट देखो',
+    secondaryLabel: 'पिछला टेस्ट देखें',
     secondaryAction: 'chat-prompt',
-    secondaryPrompt: 'मेरे पिछले टेस्ट का review करो और बताओ कहाँ सुधार करना है!',
+    secondaryPrompt: 'मेरे पिछले टेस्ट का breakdown दो और बताओ कहाँ सुधार करना है।',
   };
 }
 
@@ -240,7 +258,16 @@ export function analyzePatterns(allHistory, allKeyStats, focusLayout) {
 
   const recent5 = scopedHistory.slice(0, 5);
   const weakReport = computeWeakKeyReport(allKeyStats, layoutId);
-  const weakest = weakReport.weakestChars.slice(0, 5);
+  const weakest = weakReport.weakestChars.slice(0, 5).map((w) => {
+    const zone = getFingerZone(w.keyLabel);
+    return {
+      ...w,
+      fingerZone: zone,
+      fingerTag: zoneTagForPrompt(zone),
+      fingerLabelEn: humanizeZoneEnglish(zone),
+      fingerLabelHi: humanizeZoneHindi(zone),
+    };
+  });
 
   let avgRawGap = 0;
   let avgConsistency = 0;
@@ -262,8 +289,7 @@ export function analyzePatterns(allHistory, allKeyStats, focusLayout) {
   const zoneCounts = {};
   for (const w of weakest) {
     if (/Shift\+/i.test(w.keyLabel)) shiftWeakCount += 1;
-    const z = getFingerZone(w.keyLabel);
-    zoneCounts[z] = (zoneCounts[z] || 0) + w.misses;
+    zoneCounts[w.fingerZone] = (zoneCounts[w.fingerZone] || 0) + w.misses;
   }
   const topZone = Object.entries(zoneCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
@@ -290,16 +316,17 @@ export function analyzePatterns(allHistory, allKeyStats, focusLayout) {
 }
 
 /**
- * Build a super-compact, token-efficient snapshot (~150-220 tokens) + cache fingerprint.
+ * Build a super-compact, high-accuracy telemetry snapshot (~170-240 tokens) + cache fingerprint.
+ * Every weak key explicitly includes its exact touch-typing finger zone so the model never guesses.
  */
-export function buildBuddyContext(layoutFilter = 'all') {
+export function buildBuddyContext(layoutFilter = 'all', preferredLanguage = 'hindi') {
   const user = getActiveUser();
   const prefs = loadPrefs();
   const allHistory = loadHistory();
   const allKeyStats = loadKeyStats();
   const buddy = loadBuddyState();
   const userName = resolveUserFriendlyName();
-  const language = detectBuddyLanguage(buddy.chatHistory);
+  const language = preferredLanguage === 'english' ? 'english' : 'hindi';
 
   const effectiveLayout = layoutFilter !== 'all' ? layoutFilter : prefs.layout || 'english';
   const overall = computeDashboardMetrics(allHistory, 'all');
@@ -330,7 +357,10 @@ export function buildBuddyContext(layoutFilter = 'all') {
     .join(' | ');
 
   const weakLines = patterns.weakest
-    .map((w) => `${w.displayChar}[${w.keyLabel}:${w.errorRate}%err,${w.misses}/${w.total}]`)
+    .map(
+      (w) =>
+        `${w.displayChar}[key:${w.keyLabel}, finger:${w.fingerTag}, ${w.errorRate}%err, ${w.misses}/${w.total}]`
+    )
     .join(', ');
 
   const signals = [];
@@ -355,11 +385,15 @@ export function buildBuddyContext(layoutFilter = 'all') {
       : null,
     pbs ? `PBs: ${pbs}` : 'PBs: none yet',
     recentLines ? `LastRuns(newest first): ${recentLines}` : 'LastRuns: none yet',
-    weakLines ? `TopWeakKeys(${effectiveLayout}): ${weakLines}` : `TopWeakKeys(${effectiveLayout}): none recorded`,
+    weakLines
+      ? `TopWeakKeys(${effectiveLayout}): ${weakLines}`
+      : `TopWeakKeys(${effectiveLayout}): none recorded`,
     signals.length > 0 ? `DetectedPatterns: ${signals.join('; ')}` : null,
     `Achievements(${unlockedNames.length}/${achievements.length}): unlocked=[${unlockedNames.join(', ') || 'none'}] next=[${nextAch.join(', ')}]`,
     buddy.goal ? `UserGoal: ${buddy.goal}` : null,
-    buddy.memories && buddy.memories.length > 0 ? `Memory: ${buddy.memories.join(' | ')}` : null,
+    buddy.memories && buddy.memories.length > 0
+      ? `LongTermMemory: ${buddy.memories.join(' | ')}`
+      : null,
   ].filter(Boolean);
 
   const digest = lines.join('\n');
@@ -384,7 +418,7 @@ export function buildBuddyContext(layoutFilter = 'all') {
 }
 
 /**
- * Natural day-to-day Hindi (or English if 3+ English turns) local fallback brief.
+ * Natural everyday Hindi (or clean English) local fallback brief for Performance Hub.
  */
 export function buildLocalFallbackBrief(ctx) {
   const { userName, language, overall, scoped, patterns, achievements } = ctx;
@@ -395,15 +429,15 @@ export function buildLocalFallbackBrief(ctx) {
     if (overall.totalTests === 0) {
       return {
         mood: 'happy',
-        headline: `Hey ${userName}! I'm Kibo, your typing buddy.`,
+        headline: `Welcome ${userName} — Kibo is ready to map your typing.`,
         whyYouFail:
-          'You have not finished a test yet, so run one quick 3-minute session and I will map out your exact mistake keys and rhythm.',
+          'You have not completed a session yet. Run one calm 3-minute test and I will pinpoint your exact weak keys, finger zones, and pacing leaks.',
         actionPlan: [
-          'Take a calm 3-minute test without rushing for speed.',
-          'Keep accuracy above 94% first—no-backspace mode rewards steady rhythm.',
-          'Check back here right after so I can pinpoint your trickiest keys.',
+          'Start with a steady 3-minute test instead of rushing for peak speed.',
+          'Hold 95%+ accuracy first—no-backspace mode rewards clean keystrokes.',
+          'Return right after to see your custom drill and finger breakdown.',
         ],
-        celebration: `Ready to unlock your first badge (0/${achievements.length} so far)!`,
+        celebration: `Ready to unlock your first achievement (0/${achievements.length} so far).`,
         drillNote: `Warm up in ${layoutName}`,
         memoryNote: '',
       };
@@ -411,50 +445,50 @@ export function buildLocalFallbackBrief(ctx) {
 
     const topWeak = patterns.weakest.slice(0, 3);
     const weakNames = topWeak
-      .map((w) => `"${w.displayChar}" (${w.errorRate}% err on ${w.keyLabel})`)
+      .map((w) => `"${w.displayChar}" (${w.errorRate}% err, ${w.fingerLabelEn})`)
       .join(', ');
 
     return {
       mood: topWeak.length > 0 ? 'coach' : 'happy',
-      headline: `Hey ${userName}, Kibo found where your speed is leaking!`,
+      headline: `${userName}, here is where your Net WPM is leaking.`,
       whyYouFail:
         topWeak.length > 0
-          ? `Your biggest slips right now are ${weakNames}, mostly around your ${patterns.topZoneLabel || 'outer keys'}. Slowing down 10% on those transitions will boost both accuracy and Net WPM.`
-          : `Your accuracy is super clean (${scoped.weightedAccuracy}%)! Now focus on holding steady rhythm across longer runs.`,
+          ? `Your highest error rates are on ${weakNames}. Slowing down 10% on those reaches and snapping back to home row will lift both accuracy and Net WPM.`
+          : `Your accuracy is solid (${scoped.weightedAccuracy}%). The next leap comes from keeping steady rhythm across longer 5-minute runs.`,
       actionPlan: [
         topWeak.length > 0
           ? `Drill ${topWeak.map((w) => w.displayChar).join(' ')} for 3 minutes at 95%+ accuracy.`
-          : `Push a 5-minute ${layoutName} test to test endurance.`,
-        'Keep your eyes 1–2 words ahead of the caret to avoid sudden pauses.',
-        'Tell me your WPM or exam goal in chat so I can tailor your drills.',
+          : `Run a 5-minute ${layoutName} test to build endurance.`,
+        'Keep your eyes 1–2 words ahead of the cursor to eliminate micro-pauses.',
+        'Tell Kibo your target WPM or exam in chat for tailored practice tests.',
       ],
-      celebration: `${overall.totalTests} tests done and ${unlocked}/${achievements.length} achievements unlocked!`,
-      drillNote: 'Targeted drill',
+      celebration: `${overall.totalTests} tests completed with ${unlocked}/${achievements.length} achievements unlocked.`,
+      drillNote: 'Targeted weak-keys drill',
       memoryNote: '',
     };
   }
 
-  // Default: Natural day-to-day friendly Hindi!
+  // Default: Natural, respectful everyday Hindi
   if (overall.totalTests === 0) {
     return {
       mood: 'happy',
-      headline: `अरे ${userName}! मैं Kibo हूँ—तुम्हारा typing दोस्त।`,
+      headline: `स्वागत है ${userName}! मैं Kibo हूँ—आपका typing coach।`,
       whyYouFail:
-        'अभी तक एक भी टेस्ट पूरा नहीं हुआ है, इसलिए कोई डेटा नहीं है। बस एक छोटा सा 3-min टेस्ट लगाओ, फिर मैं बताऊँगा कि कौन सी उंगली या key तुम्हारी स्पीड रोक रही है!',
+        'अभी तक एक भी टेस्ट पूरा नहीं हुआ है। एक आरामदायक 3-min टेस्ट पूरा करें, उसके बाद मैं आपकी exact mistake keys, finger zone और rhythm का पूरा विश्लेषण दिखाऊँगा।',
       actionPlan: [
-        'पहले एक आराम से 3-min टेस्ट लगाओ—अभी स्पीड की टेंशन मत लो।',
-        'Accuracy 94%+ रखने पर ध्यान दो, no-backspace में यही सबसे ज़्यादा काम आता है।',
-        'टेस्ट खत्म होते ही यहाँ आओ—मैं तुम्हारी exact गलतियाँ पकड़ कर बताऊँगा।',
+        'पहले एक शांत 3-min टेस्ट लगाएँ—शुरुआत में स्पीड की जल्दी न करें।',
+        'Accuracy 95%+ रखने पर ध्यान दें, no-backspace मोड में यही Net WPM बढ़ाता है।',
+        'टेस्ट पूरा होते ही यहाँ देखें—मैं आपकी कमज़ोर keys का drill तैयार कर दूँगा।',
       ],
-      celebration: `चलो पहला achievement unlock करते हैं (अभी 0/${achievements.length})!`,
-      drillNote: `${layoutName} में एक warm-up टेस्ट शुरू करो।`,
+      celebration: `पहला achievement unlock करने के लिए तैयार (अभी 0/${achievements.length})।`,
+      drillNote: `${layoutName} में warm-up टेस्ट शुरू करें।`,
       memoryNote: '',
     };
   }
 
   const topWeak = patterns.weakest.slice(0, 3);
   const weakNames = topWeak
-    .map((w) => `"${w.displayChar}" (${w.errorRate}% गलती, ${w.keyLabel})`)
+    .map((w) => `"${w.displayChar}" (${w.errorRate}% गलती, ${w.fingerLabelHi})`)
     .join(', ');
 
   let why = '';
@@ -462,156 +496,289 @@ export function buildLocalFallbackBrief(ctx) {
 
   if (topWeak.length > 0 && patterns.avgRawGap >= 6) {
     mood = 'concerned';
-    why = `तुम थोड़ी ज़्यादा जल्दी टाइप कर रहे हो (Raw स्पीड Net से +${patterns.avgRawGap} WPM ज़्यादा है), इसलिए ${weakNames} पर slip हो रहा है। No-backspace मोड में एक गलत key तुम्हारी Net WPM काफी गिरा देती है!`;
+    why = `आप थोड़ी जल्दी टाइप कर रहे हैं (Raw स्पीड Net से +${patterns.avgRawGap} WPM ज़्यादा है), जिस वजह से ${weakNames} पर slip हो रहा है। No-backspace मोड में एक भी गलती Net WPM को सीधा नीचे लाती है।`;
   } else if (topWeak.length > 0 && patterns.hasMatraWeakness) {
     mood = 'coach';
-    why = `${layoutName} में सबसे ज़्यादा गड़बड़ ${weakNames} पर हो रही है। मात्रा और आधे अक्षर (conjuncts) तब गलत होते हैं जब उँगलियाँ order से पहले भागती हैं—इन जगहों पर बस हल्का सा slow हो जाओ!`;
+    why = `${layoutName} में सबसे ज़्यादा गड़बड़ ${weakNames} पर हो रही है। मात्रा और आधे अक्षर (conjuncts) तब चूकते हैं जब उँगलियाँ sequence से पहले चलती हैं—इन जगहों पर हल्का सा नियंत्रण रखें।`;
   } else if (topWeak.length > 0 && patterns.shiftWeakCount >= 2) {
     mood = 'coach';
-    why = `तुम्हारी ज़्यादातर गलतियाँ (${weakNames}) Shift वाली keys पर हैं। अक्सर Shift key थोड़ा पहले छूट जाती है—बस दूसरे हाथ से Shift को एक पल ज़्यादा दबाकर रखो, accuracy तुरंत उछलेगी!`;
+    why = `ज़्यादातर गलतियाँ (${weakNames}) Shift वाली keys पर हैं। अक्सर Shift key अक्षर से थोड़ा पहले छूट जाती है—दूसरे हाथ की pinky से Shift को एक पल ज़्यादा दबाकर रखें।`;
   } else if (topWeak.length > 0) {
     mood = scoped.weightedAccuracy < 90 ? 'concerned' : 'coach';
-    why = `अभी तुम्हारी स्पीड को ${weakNames} रोक रहे हैं—खासकर ${patterns.topZoneLabelHi || 'किनारे वाली keys'} पर। बस ये 2–3 keys ठीक कर लीं तो Net WPM और Accuracy दोनों मस्त बढ़ जाएँगी!`;
+    why = `अभी आपकी स्पीड ${weakNames} पर अटक रही है। इन 2–3 keys पर सही उंगली से 10% आराम से प्रैक्टिस करते ही Net WPM और Accuracy दोनों तेज़ी से बढ़ेंगे।`;
   } else {
     mood = 'celebrate';
-    why = `वाह यार, तुम्हारी accuracy (${scoped.weightedAccuracy}%) बहुत साफ है! अब अगला लेवल है 5-min या 2-Page टेस्ट में यही rhythm बनाए रखना।`;
+    why = `आपकी accuracy (${scoped.weightedAccuracy}%) काफी साफ है। अब अगला कदम 5-min या 2-Page टेस्ट में यही स्थिर rhythm बनाए रखना है।`;
   }
 
   const actions = [];
   if (topWeak.length > 0) {
     actions.push(
-      `नीचे "Drill Weak Keys" दबाकर 3 मिनट सिर्फ ${topWeak.map((w) => w.displayChar).join(' ')} की प्रैक्टिस करो।`
+      `नीचे "Drill Weak Keys" से 3 मिनट ${topWeak.map((w) => w.displayChar).join(' ')} की फोकस्ड प्रैक्टिस करें।`
     );
   } else {
-    actions.push(`${layoutName} में एक 5-min टेस्ट लगाओ ताकि स्पीड ${scoped.weightedAvgWpm} WPM से ऊपर जाए।`);
+    actions.push(`${layoutName} में एक 5-min टेस्ट लगाएँ ताकि स्पीड ${scoped.weightedAvgWpm} WPM से ऊपर जाए।`);
   }
 
   if (patterns.avgRawGap >= 6) {
-    actions.push('अगले 2 टेस्ट में थोड़ा आराम से टाइप करो—95%+ accuracy आते ही Net WPM अपने आप बढ़ेगी।');
+    actions.push('अगले 2 टेस्ट में 95%+ accuracy लॉक करें—Net WPM अपने आप ऊपर जाएगी।');
   } else if (patterns.shiftWeakCount >= 2) {
-    actions.push('Shift हमेशा opposite हाथ की छोटी उंगली से दबाओ और letter के बाद छोड़ो।');
+    actions.push('Shift हमेशा opposite हाथ की pinky से दबाएँ और key दबने के बाद छोड़ें।');
   } else {
-    actions.push('नज़र हमेशा current अक्षर से 1–2 शब्द आगे रखो, इससे अटकना बंद हो जाएगा।');
+    actions.push('नज़र हमेशा current शब्द से 1–2 शब्द आगे रखें ताकि flow न टूटे।');
   }
 
   const nextAch = achievements.find((a) => !a.unlocked);
   if (nextAch) {
-    actions.push(`अगला टारगेट: "${nextAch.title}" badge (${nextAch.progressLabel}) unlock करो!`);
+    actions.push(`अगला टारगेट: "${nextAch.title}" badge (${nextAch.progressLabel}) unlock करें।`);
   } else {
-    actions.push('2-Page टेस्ट ट्राय करो ताकि लंबी typing में थकान न हो।');
+    actions.push('2-Page टेस्ट ट्राय करें ताकि लंबी typing में थकान और गलतियाँ कम हों।');
   }
 
-  let celebration = `अब तक ${overall.totalTests} टेस्ट पूरे और ${unlocked}/${achievements.length} achievements unlock हो चुके हैं!`;
+  let celebration = `अब तक ${overall.totalTests} टेस्ट पूरे और ${unlocked}/${achievements.length} achievements unlock हो चुके हैं।`;
   if (scoped.recentDeltaWpm !== null && scoped.recentDeltaWpm > 0) {
     mood = 'happy';
-    celebration = `मस्त फॉर्म में हो ${userName}! पिछले 5 टेस्ट में तुम्हारी स्पीड average से +${scoped.recentDeltaWpm} WPM ज़्यादा है!`;
+    celebration = `बेहतरीन प्रोग्रेस, ${userName}! पिछले 5 टेस्ट में आपकी स्पीड average से +${scoped.recentDeltaWpm} WPM ज़्यादा है।`;
   } else if (overall.streakDays >= 2) {
-    celebration = `जबरदस्त ${overall.streakDays}-day streak चल रही है ${userName}—रोज़ थोड़ा अभ्यास ही असली जादू करता है!`;
+    celebration = `लगातार ${overall.streakDays}-day streak शानदार है—रोज़ की थोड़ी प्रैक्टिस ही असली फर्क लाती है।`;
   }
 
   return {
     mood,
     headline:
       scoped.recentDeltaWpm !== null && scoped.recentDeltaWpm > 0
-        ? `क्या बात है ${userName}! स्पीड ऊपर जा रही है!`
-        : `हे ${userName}, मैंने पकड़ लिया कि स्पीड कहाँ अटक रही है!`,
+        ? `शानदार फॉर्म, ${userName} — स्पीड लगातार बढ़ रही है।`
+        : `${userName}, आपकी स्पीड और accuracy का फोकस पॉइंट मिल गया है।`,
     whyYouFail: why,
     actionPlan: actions.slice(0, 3),
     celebration,
     drillNote:
       topWeak.length > 0
-        ? `${topWeak.map((w) => w.displayChar).join(', ')} का drill`
-        : `${layoutName} में स्पीड प्रैक्टिस`,
+        ? `${topWeak.map((w) => w.displayChar).join(', ')} का targeted drill`
+        : `${layoutName} स्पीड प्रैक्टिस`,
     memoryNote: '',
   };
 }
 
 /**
- * Local fallback chat responder when offline or before GROQ_API_KEY is added.
+ * Build a realistic custom practice test locally (used offline or if Groq is unavailable).
+ */
+export function buildLocalCustomTest(message, ctx) {
+  const lower = String(message || '').toLowerCase();
+  const wantsHindi =
+    /[\u0900-\u097F]/.test(message) &&
+    (lower.includes('hindi') ||
+      lower.includes('mangal') ||
+      lower.includes('kruti') ||
+      lower.includes('हिंदी') ||
+      lower.includes('हिन्दी') ||
+      lower.includes('मंगल') ||
+      lower.includes('कृति') ||
+      ctx.patterns.isHindi);
+
+  const layout = lower.includes('kruti') || lower.includes('कृति')
+    ? 'kruti-dev'
+    : lower.includes('mangal') || lower.includes('मंगल') || wantsHindi
+      ? 'mangal'
+      : 'english';
+
+  const minMatch = lower.match(/\b([1-9]|1[0-5])\s*(min|minute|minutes|मिनट)\b/);
+  const durationMinutes = minMatch ? Number(minMatch[1]) : 3;
+
+  if (layout !== 'english') {
+    return {
+      title: layout === 'kruti-dev' ? 'कृति देव फोकस्ड प्रैक्टिस टेस्ट' : 'मंगल मात्रा और गति अभ्यास',
+      layout,
+      durationMinutes,
+      text: 'नियमित अभ्यास से हिंदी टाइपिंग में गति और शुद्धता दोनों एक साथ बढ़ती हैं। शुरुआती दौर में हर मात्रा, आधे अक्षर और विराम चिह्न को सही उंगली से दबाने की आदत डालनी चाहिए। जब उंगलियों को कुंजियों की सही स्थिति याद हो जाती है, तब बिना देखे लगातार तेज़ और सटीक टाइप करना बिल्कुल आसान लगने लगता है।',
+    };
+  }
+
+  if (lower.includes('number') || lower.includes('digit') || /[0-9]/.test(lower)) {
+    return {
+      title: 'Number Row Precision Test',
+      layout: 'english',
+      durationMinutes,
+      text: 'Batch 1647 cleared inspection at 06:45 with 98.6% accuracy across 265 units. Team 6 logged 76 entries on shelf 48, verified code 6092, and shipped 368 boxes before 17:30. Keep your right index finger anchored on J as you reach up to 6 and 7, then return cleanly to home row before typing 8456, 2960, and 7614.',
+    };
+  }
+
+  if (lower.includes('symbol') || lower.includes('punct') || lower.includes('code')) {
+    return {
+      title: 'Punctuation & Shift Control Test',
+      layout: 'english',
+      durationMinutes,
+      text: 'Hold Shift with the opposite pinky: clean rhythm beats rushing! Check item #42 (status: ready), confirm the 95.5% target, and review notes — "Accuracy first, speed second." When brackets [a, b], colons, and hyphens appear mid-sentence, stay calm and keep your wrists floating lightly over the home row.',
+    };
+  }
+
+  const weakChars = ctx.patterns.weakest.slice(0, 4).map((w) => w.displayChar);
+  if (weakChars.length > 0) {
+    return {
+      title: `Weak Keys Drill (${weakChars.join(' ')})`,
+      layout: 'english',
+      durationMinutes,
+      text: 'Steady touch typing builds speed naturally when every finger returns to its home key after each reach. Read two words ahead of the cursor, keep your shoulders relaxed, and maintain ninety-six percent accuracy before pushing faster. Consistent daily drills turn awkward transitions into effortless muscle memory over just a few focused weeks.',
+    };
+  }
+
+  return {
+    title: 'Speed & Rhythm Builder Test',
+    layout: 'english',
+    durationMinutes,
+    text: 'Great typists focus on smooth rhythm rather than frantic bursts of speed. When your eyes scan two words ahead of the caret, your fingers prepare the next combination before you even finish the current word. Maintain crisp accuracy above ninety-five percent, keep your wrists level, and let speed rise steadily across every minute.',
+  };
+}
+
+/**
+ * Local fallback chat responder when offline or before GROQ_API_KEY is configured.
+ * Formats replies cleanly in Markdown and matches the user's language immediately.
  */
 export function buildLocalFallbackReply(message, ctx, reasonCode) {
   const { userName, language, overall, scoped, patterns } = ctx;
-  const lower = message.toLowerCase();
+  const lower = String(message || '').toLowerCase();
   const topWeak = patterns.weakest.slice(0, 3);
-  const weakStr = topWeak.map((w) => `"${w.displayChar}" (${w.errorRate}% गलती)`).join(', ');
+
+  const wantsCustomTest =
+    /\b(test|drill|passage|practice text|exercise)\b/.test(lower) &&
+    /\b(make|build|create|give|generate|custom|write)\b/.test(lower) ||
+    /(टेस्ट|ड्रिल|प्रैक्टिस).*(बना|दो|दीजिए|तैयार)/.test(message);
+
+  const customTest = wantsCustomTest ? buildLocalCustomTest(message, ctx) : null;
 
   if (reasonCode === 'OFFLINE') {
+    if (language === 'english') {
+      return {
+        reply: [
+          '### You appear to be offline',
+          'Is your internet turned off or WiFi disconnected? No problem—typing practice works completely offline.',
+          '',
+          `**Your local snapshot (${userName}):**`,
+          `- **Average Speed:** ${scoped.weightedAvgWpm} WPM (Best: ${scoped.bestWpm} WPM)`,
+          `- **Accuracy:** ${scoped.weightedAccuracy}% across ${overall.totalTests} tests`,
+          customTest ? '\nI also built an offline custom practice test for you below.' : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        mood: 'concerned',
+        customTest,
+      };
+    }
+
     return {
-      reply: `अरे यार ${userName}, तुमने internet बंद किया है क्या? या WiFi connect नहीं है? 😅\nकोई बात नहीं, मैं तुम्हारे local stats देखकर भी मदद कर सकता हूँ—अभी तुम्हारी avg स्पीड ${scoped.weightedAvgWpm} WPM और accuracy ${scoped.weightedAccuracy}% है। नेट आते ही मैं फिर फुल AI मोड में आ जाऊँगा!`,
+      reply: [
+        '### लगता है आप Offline हैं',
+        'क्या आपने internet बंद किया है या WiFi connect नहीं है? कोई बात नहीं—typing प्रैक्टिस offline भी बिल्कुल स्मूद चलती है।',
+        '',
+        `**आपका local डेटा (${userName}):**`,
+        `- **Average Speed:** ${scoped.weightedAvgWpm} WPM (Best: ${scoped.bestWpm} WPM)`,
+        `- **Accuracy:** ${scoped.weightedAccuracy}% (${overall.totalTests} टेस्ट)`,
+        customTest ? '\nमैंने नीचे आपके लिए offline custom practice test भी तैयार कर दिया है।' : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
       mood: 'concerned',
-      drillText: '',
+      customTest,
     };
   }
 
   const keyHint =
     reasonCode === 'NO_API_KEY'
-      ? '\n\n(नोट: AI Studio के Settings → Secrets में GROQ_API_KEY डालते ही मैं फुल Groq AI के साथ लाइव बात करूँगा!)'
+      ? language === 'english'
+        ? '\n\n---\n*Tip: Add `GROQ_API_KEY` in Settings → Secrets to enable live Groq AI responses.*'
+        : '\n\n---\n*नोट: Settings → Secrets में `GROQ_API_KEY` जोड़ते ही लाइव Groq AI चालू हो जाएगा।*'
       : '';
 
   if (language === 'english') {
-    const weakEn = topWeak.map((w) => `"${w.displayChar}" (${w.errorRate}% err)`).join(', ');
-    if (overall.totalTests === 0) {
+    if (customTest) {
       return {
-        reply: `Hey ${userName}! Finish one quick test first and I'll break down your exact weak keys and speed. By the way, what's your typing goal?${keyHint}`,
+        reply: [
+          `### Custom Test Ready: ${customTest.title}`,
+          'Focus on **95%+ accuracy** and return to the home row (`ASDF` / `JKL;`) after every outer reach.',
+          '',
+          'Click **Start Practice Test** below whenever you are ready.' + keyHint,
+        ].join('\n'),
         mood: 'happy',
-        drillText: '',
+        customTest,
       };
     }
+
+    if (overall.totalTests === 0) {
+      return {
+        reply: [
+          `Hi ${userName}! Complete one quick 3-minute test first so I can analyze your real weak keys and speed rhythm.`,
+          '',
+          'What typing goal or exam are you preparing for?' + keyHint,
+        ].join('\n'),
+        mood: 'happy',
+        customTest: null,
+      };
+    }
+
+    const weakBullets = topWeak.map(
+      (w) => `- \`${w.displayChar}\` — **${w.errorRate}% error** (${w.fingerLabelEn}, key \`${w.keyLabel}\`)`
+    );
+
     return {
-      reply: `Hey ${userName}! You're at ${scoped.weightedAvgWpm} avg WPM and ${scoped.weightedAccuracy}% accuracy across ${overall.totalTests} tests. ${weakEn ? `Top slips: ${weakEn}. Slow down 10% on those keys to jump your Net WPM!` : 'Your accuracy looks super clean!'} What WPM are you aiming for?${keyHint}`,
+      reply: [
+        `### Quick Breakdown for ${userName}`,
+        `- **Average Speed:** ${scoped.weightedAvgWpm} WPM (Personal Best: **${scoped.bestWpm} WPM**)`,
+        `- **Accuracy:** ${scoped.weightedAccuracy}% across ${overall.totalTests} tests`,
+        weakBullets.length > 0 ? '\n**Top keys to tighten up:**\n' + weakBullets.join('\n') : '',
+        '\nSlow down 10% on those specific keys and keep your eyes 1–2 words ahead of the cursor.' +
+          keyHint,
+      ]
+        .filter(Boolean)
+        .join('\n'),
       mood: 'coach',
-      drillText: '',
+      customTest: null,
     };
   }
 
-  // Friendly everyday Hindi fallback
+  // Natural everyday Hindi fallback
+  if (customTest) {
+    return {
+      reply: [
+        `### Custom Test तैयार है: ${customTest.title}`,
+        '- **लक्ष्य:** 95%+ accuracy के साथ शांत rhythm में टाइप करें।',
+        '- **ध्यान दें:** हर reach के बाद उंगलियाँ तुरंत home row (`ASDF` / `JKL;`) पर वापस लाएँ।',
+        '',
+        'नीचे दिए **Start Practice Test** बटन पर क्लिक करके शुरू करें।' + keyHint,
+      ].join('\n'),
+      mood: 'happy',
+      customTest,
+    };
+  }
+
   if (overall.totalTests === 0) {
     return {
-      reply: `अरे ${userName}, पहले एक छोटा सा 3-min टेस्ट लगाओ ना! उसके बाद मैं तुम्हारी हर गलती और स्पीड का पूरा हिसाब बताऊँगा। वैसे तुम किस exam या काम के लिए typing कर रहे हो?${keyHint}`,
+      reply: [
+        `नमस्ते ${userName}! पहले एक छोटा 3-min टेस्ट पूरा करें, उसके बाद मैं आपकी हर कमज़ोर key और स्पीड का पूरा breakdown दूँगा।`,
+        '',
+        'वैसे आप किसी exam (SSC / CPCT / Court) की तैयारी कर रहे हैं या general typing speed बढ़ाना चाहते हैं?' +
+          keyHint,
+      ].join('\n'),
       mood: 'happy',
-      drillText: '',
+      customTest: null,
     };
   }
 
-  if (
-    lower.includes('why') ||
-    lower.includes('fail') ||
-    lower.includes('mistake') ||
-    lower.includes('weak') ||
-    lower.includes('galat') ||
-    lower.includes('गलत') ||
-    lower.includes('क्यों') ||
-    lower.includes('kyu')
-  ) {
-    const why =
-      topWeak.length > 0
-        ? `देखो ${userName}, तुम्हारी सबसे ज़्यादा गलती ${weakStr} पर हो रही है${patterns.topZoneLabelHi ? ` (ज़्यादातर ${patterns.topZoneLabelHi} से)` : ''}। ${patterns.avgRawGap >= 6 ? `तुम थोड़ा तेज़ भाग रहे हो (Raw स्पीड +${patterns.avgRawGap} WPM ज़्यादा है), इसलिए no-backspace में Net WPM कट रही है।` : 'बस इन keys पर 10% आराम से टाइप करो, गलतियाँ आधी हो जाएँगी!'}`
-        : `अरे ${userName}, तुम्हारी accuracy (${scoped.weightedAccuracy}%) तो बढ़िया है! अब बस लंबे टेस्ट में rhythm बनाए रखो।`;
-    return {
-      reply: `${why} क्या तुम रोज़ कितना टाइम प्रैक्टिस करते हो?${keyHint}`,
-      mood: 'coach',
-      drillText: '',
-    };
-  }
-
-  if (
-    lower.includes('plan') ||
-    lower.includes('drill') ||
-    lower.includes('improve') ||
-    lower.includes('practice') ||
-    lower.includes('कैसे') ||
-    lower.includes('कहाँ')
-  ) {
-    return {
-      reply: `चलो ${userName}, ये रहा तुम्हारे लिए मस्त 5-min प्लान:\n• पहले 2 मिनट: Weak Keys drill आराम से लगाओ (96%+ accuracy पर ध्यान)${topWeak.length ? ` — खासकर ${topWeak.map((w) => w.displayChar).join(' ')}` : ''}।\n• अगले 3 मिनट: एक पूरा 3-min टेस्ट लगाओ बिना जल्दबाज़ी किए!\nवैसे तुम्हारा target WPM क्या है?${keyHint}`,
-      mood: 'happy',
-      drillText: '',
-    };
-  }
+  const weakBulletsHi = topWeak.map(
+    (w) => `- \`${w.displayChar}\` — **${w.errorRate}% गलती** (${w.fingerLabelHi}, key \`${w.keyLabel}\`)`
+  );
 
   return {
-    reply: `हे ${userName}! अभी तुम्हारे ${overall.totalTests} टेस्ट हो चुके हैं—avg स्पीड ${scoped.weightedAvgWpm} WPM, accuracy ${scoped.weightedAccuracy}% और बेस्ट ${scoped.bestWpm} WPM है! ${topWeak.length ? `सबसे ज़्यादा ${weakStr} अटक रहे हैं—चलो इन्हें ठीक करें?` : 'बढ़िया चल रहा है यार!'} वैसे तुम्हें English ज़्यादा पसंद है या Hindi Mangal/Kruti Dev?${keyHint}`,
-    mood: 'happy',
-    drillText: '',
+    reply: [
+      `### ${userName}, आपका Quick Summary`,
+      `- **Average Speed:** ${scoped.weightedAvgWpm} WPM (Personal Best: **${scoped.bestWpm} WPM**)`,
+      `- **Accuracy:** ${scoped.weightedAccuracy}% (${overall.totalTests} टेस्ट)`,
+      weakBulletsHi.length > 0 ? '\n**इन keys पर सबसे ज़्यादा ध्यान दें:**\n' + weakBulletsHi.join('\n') : '',
+      '\nअगर आप चाहें तो मैं इनमें से किसी भी कमज़ोर key या exam pattern पर तुरंत एक custom practice test बना सकता हूँ।' +
+        keyHint,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    mood: 'coach',
+    customTest: null,
   };
 }

@@ -35,7 +35,6 @@ function emptyBuddyState() {
     preferredName: '',
     goal: '',
     memories: [],
-    chatHistory: [],
     cachedBrief: null,
     cachedFingerprint: '',
   };
@@ -49,13 +48,8 @@ function normalizeBuddyState(raw) {
   if (Array.isArray(raw.memories)) {
     base.memories = raw.memories
       .filter((m) => typeof m === 'string' && m.trim())
-      .map((m) => m.trim().slice(0, 100))
-      .slice(-8);
-  }
-  if (Array.isArray(raw.chatHistory)) {
-    base.chatHistory = raw.chatHistory
-      .filter((msg) => msg && (msg.role === 'user' || msg.role === 'assistant') && typeof msg.content === 'string')
-      .slice(-30);
+      .map((m) => m.trim().slice(0, 110))
+      .slice(-16);
   }
   if (raw.cachedBrief && typeof raw.cachedBrief === 'object') {
     base.cachedBrief = raw.cachedBrief;
@@ -187,18 +181,18 @@ export function saveBuddyState(partial) {
 }
 
 export function appendBuddyMemory(note) {
-  const clean = typeof note === 'string' ? note.trim().slice(0, 100) : '';
-  if (!clean) return loadBuddyState();
+  const clean = typeof note === 'string' ? note.trim().slice(0, 110) : '';
+  if (!clean) return { buddy: loadBuddyState(), added: false };
   const key = getActiveVaultKey();
   const vault = readVaultByKey(key);
   const existing = vault.buddy.memories || [];
   const norm = clean.toLowerCase();
   if (existing.some((m) => m.toLowerCase() === norm)) {
-    return vault.buddy;
+    return { buddy: vault.buddy, added: false };
   }
-  vault.buddy.memories = [...existing, clean].slice(-8);
+  vault.buddy.memories = [...existing, clean].slice(-16);
   writeVaultByKey(key, vault);
-  return vault.buddy;
+  return { buddy: vault.buddy, added: true };
 }
 
 export function clearBuddyMemories() {
@@ -210,7 +204,7 @@ export function hasGuestSessions() {
 }
 
 /**
- * Copy guest sessions, keyStats, buddy memory, and prefs into the newly created active user vault.
+ * Copy guest sessions, keyStats, buddy long-term memory, and prefs into the newly created active user vault.
  */
 export function importGuestDataIntoActiveVault() {
   const targetKey = getActiveVaultKey();
@@ -237,18 +231,13 @@ export function importGuestDataIntoActiveVault() {
     target.keyStats[layoutId] = dstMap;
   }
 
-  // Merge guest buddy notes if target has none yet
   const mergedMem = Array.from(
     new Set([...(guest.buddy?.memories || []), ...(target.buddy?.memories || [])])
-  ).slice(-8);
+  ).slice(-16);
   target.buddy = normalizeBuddyState({
     ...guest.buddy,
     ...target.buddy,
     memories: mergedMem,
-    chatHistory:
-      (target.buddy?.chatHistory?.length || 0) > 0
-        ? target.buddy.chatHistory
-        : guest.buddy?.chatHistory || [],
   });
 
   writeVaultByKey(targetKey, target);

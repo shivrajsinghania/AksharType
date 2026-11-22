@@ -409,18 +409,18 @@
               <div class="buddy-perf-identity">
                 <div class="kibo-avatar kibo-avatar-lg mood-idle" id="buddy-perf-avatar" aria-hidden="true"></div>
                 <div class="buddy-perf-heading">
-                  <h2 class="buddy-perf-headline" id="buddy-perf-headline">अरे दोस्त! मैं Kibo हूँ—चलो तुम्हारी स्पीड चेक करते हैं।</h2>
+                  <h2 class="buddy-perf-headline" id="buddy-perf-headline">स्वागत है! मैं Kibo हूँ—आपका AI typing coach।</h2>
                   <div class="buddy-perf-meta-row">
                     <span class="buddy-perf-meta" id="buddy-perf-meta">Kibo AI Coach · Real-time diagnostics</span>
                     <span class="meta-sep" aria-hidden="true">&middot;</span>
-                    <button type="button" class="buddy-inline-link" id="buddy-edit-name-btn">अपना नाम सेट करो</button>
+                    <button type="button" class="buddy-inline-link" id="buddy-edit-name-btn">अपना नाम सेट करें</button>
                   </div>
                   <form class="buddy-name-inline-form is-hidden" id="buddy-name-inline-form">
                     <input
                       type="text"
                       id="buddy-name-inline-input"
                       class="buddy-mini-input"
-                      placeholder="Kibo तुम्हें किस नाम से बुलाए?"
+                      placeholder="Kibo आपको किस नाम से बुलाए?"
                       maxlength="32"
                       aria-label="Preferred name for Kibo"
                     />
@@ -431,7 +431,7 @@
 
               <div class="buddy-perf-top-actions">
                 <button type="button" class="btn-ghost btn-sm" id="buddy-perf-refresh-btn">Refresh Insight</button>
-                <button type="button" class="btn-secondary btn-sm" id="buddy-perf-chat-btn">Kibo से Chat करो</button>
+                <button type="button" class="btn-secondary btn-sm" id="buddy-perf-chat-btn">Kibo से Chat करें</button>
               </div>
             </div>
 
@@ -439,7 +439,7 @@
               <div class="buddy-diag-col">
                 <div class="buddy-sublabel">गलती कहाँ हो रही है</div>
                 <p class="buddy-why-text" id="buddy-perf-why">
-                  एक छोटा सा टेस्ट पूरा करो, फिर मैं तुम्हारी exact गलतियाँ और स्पीड का पैटर्न पकड़ कर बताऊँगा।
+                  एक छोटा टेस्ट पूरा करें, फिर मैं आपकी exact गलतियाँ और स्पीड का पैटर्न दिखाऊँगा।
                 </p>
                 <p class="buddy-celebration is-hidden" id="buddy-perf-celebration"></p>
               </div>
@@ -453,7 +453,7 @@
             <div class="buddy-perf-footer">
               <div class="buddy-quick-prompts" id="buddy-perf-quick-prompts"></div>
               <button type="button" class="btn-primary btn-sm" id="buddy-perf-drill-btn">
-                Recommended Practice शुरू करो
+                Recommended Practice शुरू करें
               </button>
             </div>
           </div>
@@ -776,14 +776,14 @@
           <div class="kibo-avatar kibo-avatar-sm mood-idle" id="buddy-chat-avatar" aria-hidden="true"></div>
           <div class="buddy-chat-title-wrap">
             <div class="buddy-chat-title">Kibo</div>
-            <div class="buddy-chat-subtitle" id="buddy-chat-subtitle">दोस्त · live stats synced</div>
+            <div class="buddy-chat-subtitle" id="buddy-chat-subtitle">AI Typing Coach · live stats synced</div>
           </div>
         </div>
         <div class="buddy-chat-controls">
-          <button type="button" class="btn-ghost btn-sm" id="buddy-memory-toggle" title="Kibo क्या याद रखता है">
+          <button type="button" class="btn-ghost btn-sm" id="buddy-memory-toggle" title="Long-term memory (chat बंद होने पर reset होती है, पर memory हमेशा रहती है)">
             Memory
           </button>
-          <button type="button" class="btn-ghost btn-sm" id="buddy-chat-clear" title="Chat साफ करो">
+          <button type="button" class="btn-ghost btn-sm" id="buddy-chat-clear" title="Chat साफ करें">
             Clear
           </button>
           <button type="button" class="btn-ghost btn-sm" id="buddy-chat-close" aria-label="Close chat">
@@ -792,12 +792,12 @@
         </div>
       </div>
 
-      <!-- Collapsible Evolving Memory Panel -->
+      <!-- Collapsible Long-Term Memory Panel -->
       <div class="buddy-memory-panel is-hidden" id="buddy-memory-panel">
         <div class="mem-grid">
           <label class="mem-field">
-            <span class="mem-label">मेरा नाम</span>
-            <input type="text" id="buddy-mem-name" class="buddy-mini-input" placeholder="तुम्हारा नाम" maxlength="32" />
+            <span class="mem-label">आपका नाम</span>
+            <input type="text" id="buddy-mem-name" class="buddy-mini-input" placeholder="आपका नाम" maxlength="32" />
           </label>
           <label class="mem-field">
             <span class="mem-label">Typing Goal</span>
@@ -811,10 +811,10 @@
           </label>
         </div>
         <div class="mem-actions-row">
-          <button type="button" class="btn-secondary btn-sm" id="buddy-mem-save">Save करो</button>
+          <button type="button" class="btn-secondary btn-sm" id="buddy-mem-save">Save करें</button>
           <button type="button" class="btn-ghost btn-sm btn-danger-text" id="buddy-mem-clear">Memory Reset</button>
         </div>
-        <div class="mem-section-label">Kibo ने तुम्हारे बारे में क्या सीखा</div>
+        <div class="mem-section-label">Kibo की Long-Term Memory (हमेशा सेव रहती है)</div>
         <div class="mem-list" id="buddy-mem-list"></div>
       </div>
 
@@ -827,7 +827,7 @@
           type="text"
           id="buddy-chat-input"
           class="buddy-chat-input"
-          placeholder="Kibo से पूछो — गलती, स्पीड या drill..."
+          placeholder="Kibo से पूछें — गलती, स्पीड या custom test..."
           maxlength="500"
           autocomplete="off"
         />

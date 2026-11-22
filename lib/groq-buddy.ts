@@ -1,6 +1,7 @@
 /**
- * AksharType — Shared Groq Engine for Kibo AI Typing Buddy
- * Used by both Express (server.ts in AI Studio / Node) and Vercel Serverless Functions (/api/buddy/*).
+ * AksharType — Shared Groq Engine for Kibo AI Typing Coach
+ * Powers both Express (server.ts) and Vercel Serverless Functions (/api/buddy/*).
+ * Uses openai/gpt-oss-20b with low reasoning effort for crisp intelligence at minimal token cost.
  */
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -16,7 +17,7 @@ export function getGroqModel(): string {
   return configured || DEFAULT_GROQ_MODEL;
 }
 
-// Lightweight per-IP sliding-window rate limiter to protect Groq free-tier quota
+// Per-IP sliding-window rate limiter to protect Groq free-tier quota
 const rateBuckets = new Map<string, number[]>();
 const RATE_WINDOW_MS = 60_000;
 const RATE_MAX_REQ = 24;
@@ -98,7 +99,7 @@ async function callGroqChat(opts: GroqCallOptions): Promise<{
     }
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 18_000);
+    const timeoutId = setTimeout(() => controller.abort(), 22_000);
 
     try {
       const resp = await fetch(GROQ_API_URL, {
@@ -188,6 +189,28 @@ function clampMood(val: unknown): 'happy' | 'celebrate' | 'coach' | 'concerned' 
   return 'coach';
 }
 
+function normalizeLayoutChoice(val: unknown): 'english' | 'mangal' | 'kruti-dev' {
+  if (val === 'mangal' || val === 'kruti-dev' || val === 'english') return val;
+  return 'english';
+}
+
+/**
+ * Shared expert touch-typing & Indian exam typing knowledge base.
+ * Prevents finger-mapping hallucinations (e.g. key 6 is RIGHT index, never left ring!).
+ */
+const TYPING_EXPERTISE_RULES = [
+  'EXACT TOUCH-TYPING FINGER MAP (NEVER get fingers wrong!):',
+  '- Left Pinky: ` 1 Q A Z | Left Ring: 2 W S X | Left Middle: 3 E D C | Left Index: 4 5 R T F G V B',
+  '- Right Index: 6 7 Y U H J N M | Right Middle: 8 I K , | Right Ring: 9 O L . | Right Pinky: 0 - = P [ ] \\ ; \' /',
+  '- Thumbs: Spacebar | Shift: ALWAYS hold Shift with the OPPOSITE hand pinky.',
+  'DOMAIN MASTERY:',
+  '- AksharType uses no-backspace mode: one error directly cuts Net WPM, so 95%+ accuracy always beats reckless raw speed.',
+  '- Speed-building science: look 1-2 words ahead (reading buffer), burst common bigrams/trigrams (th, ing, tion, के, में, प्र), keep wrists neutral/floating, return fingers to home row (ASDF / JKL;) immediately after number-row or symbol reaches.',
+  '- Hindi Mangal InScript: Left hand = vowels/matras, Right hand = consonants, `d` = halant (्) for half-letters/conjuncts.',
+  '- Hindi Kruti Dev 010: Remington layout where छोटी इ मात्रा (`f`) is typed BEFORE the consonant, Shift changes half-forms/special conjuncts, and Alt codes handle rare glyphs.',
+  '- Indian exam targets: SSC CGL/CHSL (~35 WPM Eng / 30 WPM Hindi), CPCT (30 WPM Eng / 20 WPM Hindi), High Court / Stenographer (40-50+ WPM with strict error limits).',
+].join('\n');
+
 export function getStatusPayload() {
   return {
     configured: Boolean(getGroqApiKey()),
@@ -202,13 +225,13 @@ export async function handleCoachRequest(body: Record<string, unknown>, clientIp
       payload: {
         ok: false,
         code: 'RATE_LIMITED',
-        error: 'अरे थोड़ा रुक जाओ यार! कुछ सेकंड बाद फिर ट्राई करना।',
+        error: 'थोड़ा रुकिए—कुछ सेकंड बाद दोबारा ट्राई करें।',
       },
     };
   }
 
-  const digest = sanitizeShortText(body?.digest, 2200);
-  const userName = sanitizeShortText(body?.userName, 40) || 'दोस्त';
+  const digest = sanitizeShortText(body?.digest, 2600);
+  const userName = sanitizeShortText(body?.userName, 40) || 'Friend';
   const focusLayout = sanitizeShortText(body?.focusLayout, 20) || 'english';
   const preferredLang = body?.language === 'english' ? 'english' : 'hindi';
 
@@ -221,18 +244,17 @@ export async function handleCoachRequest(body: Record<string, unknown>, clientIp
 
   const langRule =
     preferredLang === 'english'
-      ? 'Write in casual, warm, everyday friendly English.'
-      : 'Write in NATURAL DAY-TO-DAY FRIENDLY HINDI (Devanagari script, modern spoken tone like a real friend: "यार", "मस्त", "टेस्ट", "स्पीड", "एक्यूरेसी", "गलती", "फोकस"). NEVER use heavy/old-fashioned textbook Hindi words like टंकण, निरंतरता, उल्लेखनीय, कुशलता, परिश्रम, सटीकता. Use natural English typing terms (WPM, Accuracy, Shift, Space, Test, Drill) smoothly inside Hindi sentences!';
+      ? 'Write in clear, warm, intelligent, natural English.'
+      : 'Write in clear, natural, modern everyday Hindi (Devanagari script) using natural English typing terms (WPM, Accuracy, Shift, Home Row, Net Speed, Test, Drill). Be warm and respectful—NEVER start with repetitive slang like "अरे यार" and NEVER use heavy textbook Hindi (no टंकण, निरंतरता, उल्लेखनीय, सटीकता).';
 
   const systemPrompt = [
-    'You are Kibo, a cute, energetic, robotic typing buddy & close friend inside AksharType (English, Hindi Mangal, Kruti Dev 010 typing app with no-backspace mode).',
-    `Call the user "${userName}" naturally like a real buddy.`,
+    'You are Kibo, an intelligent, genuinely helpful robotic typing coach inside AksharType.',
+    `Address the user naturally as "${userName}" without sounding robotic or over-familiar. Vary your phrasing freshly every time.`,
     langRule,
-    'Be razor-sharp, honest, and grounded strictly in their real stats—never invent numbers.',
-    'Explain WHY they slip in specific areas (e.g. Shift timing, pinky/ring reach, Hindi matra order, rushing ahead of muscle memory in no-backspace mode, fatigue drop-off).',
-    'Return ONLY a compact valid JSON object with keys:',
-    '{"mood":"happy|celebrate|coach|concerned","headline":"<=115 chars warm buddy opener","whyYouFail":"2 short sentences explaining exact root cause","actionPlan":["3 short concrete steps, <=105 chars each"],"celebration":"1 short sentence praising a real achievement/streak/PB or hyping them up","drillNote":"<=90 chars describing what to drill next","memoryNote":"optional <=85 chars new lasting observation about user, or empty string"}',
-    'Keep output concise to save tokens.',
+    TYPING_EXPERTISE_RULES,
+    'Analyze the user telemetry accurately (never invent stats or wrong fingers). Explain the exact mechanical cause of their mistakes and give high-leverage steps.',
+    'Return ONLY a valid JSON object:',
+    '{"mood":"happy|celebrate|coach|concerned","headline":"<=115 chars fresh, insightful opener","whyYouFail":"2-3 crisp sentences explaining exact root cause using real weak keys & correct finger mechanics","actionPlan":["3 concrete, specific steps (<=115 chars each)"],"celebration":"1 genuine sentence highlighting a real PB/streak/achievement or encouraging milestone","drillNote":"<=90 chars focused drill note","memoryNote":"optional <=85 chars new lasting observation, or empty string"}',
   ].join('\n');
 
   const userPrompt = `Layout focus: ${focusLayout}\nUser telemetry:\n${digest}`;
@@ -242,7 +264,7 @@ export async function handleCoachRequest(body: Record<string, unknown>, clientIp
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
     ],
-    maxTokens: 600,
+    maxTokens: 680,
     temperature: 0.65,
     jsonMode: true,
   });
@@ -272,25 +294,22 @@ export async function handleCoachRequest(body: Record<string, unknown>, clientIp
           mood: 'coach',
           headline:
             preferredLang === 'english'
-              ? `Hey ${userName}, Kibo spotted a few easy wins in your stats!`
-              : `अरे ${userName}, मैंने तुम्हारे stats देख लिए—चलो स्पीड बढ़ाते हैं!`,
-          whyYouFail: sanitizeShortText(result.content, 340),
+              ? `${userName}, here is your focused speed & accuracy breakdown.`
+              : `${userName}, आपकी latest typing performance का breakdown तैयार है।`,
+          whyYouFail: sanitizeShortText(result.content, 380),
           actionPlan: [
             preferredLang === 'english'
-              ? 'Slow down 10% for 2 minutes to lock clean accuracy.'
-              : 'अगले 2 मिनट थोड़ा आराम से टाइप करो ताकि accuracy 95%+ रहे।',
+              ? 'Hold 95%+ accuracy for 2 warm-up runs before pushing peak speed.'
+              : 'स्पीड बढ़ाने से पहले 2 warm-up टेस्ट में 95%+ accuracy लॉक करें।',
             preferredLang === 'english'
-              ? 'Drill your top missed keys before chasing a speed PB.'
-              : 'स्पीड भगाने से पहले अपनी सबसे ज़्यादा miss होने वाली keys का drill करो।',
+              ? 'Drill your top weak keys slowly and return immediately to the home row.'
+              : 'अपनी top weak keys का slow drill करें और हर reach के बाद home row पर लौटें।',
             preferredLang === 'english'
-              ? 'Keep your eyes 1–2 words ahead of the cursor.'
-              : 'नज़र हमेशा cursor से 1–2 शब्द आगे रखो, rhythm अपने आप सुधरेगा।',
+              ? 'Read 1–2 words ahead of the cursor to keep steady rhythm.'
+              : 'Cursor से 1–2 शब्द आगे पढ़कर टाइप करें ताकि flow टूटे नहीं।',
           ],
-          celebration:
-            preferredLang === 'english'
-              ? 'Every completed test builds real muscle memory!'
-              : 'हर टेस्ट के साथ तुम्हारे हाथ और तेज़ हो रहे हैं!',
-          drillNote: 'Weak keys drill',
+          celebration: '',
+          drillNote: 'Targeted weak-keys drill',
           memoryNote: '',
         },
       },
@@ -299,7 +318,7 @@ export async function handleCoachRequest(body: Record<string, unknown>, clientIp
 
   const rawActions = Array.isArray(parsed.actionPlan) ? parsed.actionPlan : [];
   const actionPlan = rawActions
-    .map((item) => sanitizeShortText(item, 150))
+    .map((item) => sanitizeShortText(item, 160))
     .filter(Boolean)
     .slice(0, 3);
 
@@ -315,15 +334,15 @@ export async function handleCoachRequest(body: Record<string, unknown>, clientIp
         headline:
           sanitizeShortText(parsed.headline, 160) ||
           (preferredLang === 'english'
-            ? `Hey ${userName}, ready to level up?`
-            : `हे ${userName}, चलो आज स्पीड थोड़ा और ऊपर ले जाते हैं!`),
+            ? `${userName}, let's sharpen your typing rhythm.`
+            : `${userName}, आइए आज की प्रैक्टिस को और smart बनाते हैं।`),
         whyYouFail:
-          sanitizeShortText(parsed.whyYouFail, 440) ||
-          'एक-दो टेस्ट और पूरे करो, फिर मैं तुम्हारी exact गलतियाँ पकड़ लूँगा।',
+          sanitizeShortText(parsed.whyYouFail, 480) ||
+          'कुछ और टेस्ट पूरे करें ताकि मैं आपकी exact key mistakes का पैटर्न बता सकूँ।',
         actionPlan:
           actionPlan.length > 0
             ? actionPlan
-            : ['3 मिनट का weak-keys drill लगाओ और 95%+ accuracy रखो।'],
+            : ['3 मिनट का weak-keys drill 95%+ accuracy के साथ पूरा करें।'],
         celebration: sanitizeShortText(parsed.celebration, 220) || '',
         drillNote: sanitizeShortText(parsed.drillNote, 140) || '',
         memoryNote: sanitizeShortText(parsed.memoryNote, 100) || '',
@@ -339,14 +358,14 @@ export async function handleChatRequest(body: Record<string, unknown>, clientIp:
       payload: {
         ok: false,
         code: 'RATE_LIMITED',
-        error: 'अरे थोड़ा धीरे यार! कुछ सेकंड बाद फिर पूछना।',
+        error: 'थोड़ा रुकिए—कुछ सेकंड बाद दोबारा भेजें।',
       },
     };
   }
 
-  const message = sanitizeShortText(body?.message, 500);
-  const digest = sanitizeShortText(body?.digest, 2200);
-  const userName = sanitizeShortText(body?.userName, 40) || 'दोस्त';
+  const message = sanitizeShortText(body?.message, 600);
+  const digest = sanitizeShortText(body?.digest, 2600);
+  const userName = sanitizeShortText(body?.userName, 40) || 'Friend';
   const preferredLang = body?.language === 'english' ? 'english' : 'hindi';
   const rawHistory = Array.isArray(body?.history) ? body.history : [];
 
@@ -358,11 +377,11 @@ export async function handleChatRequest(body: Record<string, unknown>, clientIp:
   }
 
   const history: GroqMessage[] = [];
-  for (const entry of rawHistory.slice(-6)) {
+  for (const entry of rawHistory.slice(-8)) {
     if (!entry || typeof entry !== 'object') continue;
     const rec = entry as Record<string, unknown>;
     const role = rec.role === 'assistant' ? 'assistant' : rec.role === 'user' ? 'user' : null;
-    const content = sanitizeShortText(rec.content, 420);
+    const content = sanitizeShortText(rec.content, 650);
     if (role && content) {
       history.push({ role, content });
     }
@@ -370,17 +389,31 @@ export async function handleChatRequest(body: Record<string, unknown>, clientIp:
 
   const langRule =
     preferredLang === 'english'
-      ? 'The user has been chatting consistently in English, so reply in warm, casual, energetic English.'
-      : 'Reply in NATURAL DAY-TO-DAY FRIENDLY HINDI (Devanagari script, spoken dost-style tone: "अरे यार", "बढ़िया", "मस्त", "बताओ", "चलो"). NEVER use stiff/shuddh/traditional textbook Hindi words (avoid टंकण, निरंतरता, उल्लेखनीय, सटीकता, अभ्यासक्रम). Mix everyday English words naturally (WPM, accuracy, speed, test, drill, Shift, Space, exam).';
+      ? 'LANGUAGE: The user just wrote in English, so reply cleanly and naturally in English.'
+      : 'LANGUAGE: Reply in natural, clear, everyday Hindi (Devanagari script) mixed smoothly with common English typing terms (WPM, Accuracy, PB, Shift, Home Row, Net Speed, Test, Drill). NEVER use traditional/bookish Hindi (avoid टंकण, निरंतरता, उल्लेखनीय, सटीकता). NEVER overuse slang like "अरे यार" — be warm, respectful, and intelligent like a sharp coach.';
 
   const systemPrompt = [
-    'You are Kibo, a cute, enthusiastic, robotic typing buddy inside AksharType (English, Hindi Mangal, Kruti Dev 010, no-backspace mode).',
-    `Talk to "${userName}" like a genuinely interested, supportive best friend—warm, fun, curious, never robotic or boring.`,
+    'You are Kibo, an intelligent, warm, well-spoken robotic typing mentor & companion inside AksharType.',
+    `The user's name is "${userName}". Use their name naturally when it fits (not awkwardly in every sentence).`,
     langRule,
-    'Use their live stats, weak keys, achievements, streaks, and memory below. Cite real numbers/keys naturally and explain WHY mistakes happen.',
-    'Be genuinely curious about the user! When natural (especially if you do not know their goal/exam/background yet), end with 1 short friendly question to learn more about them (e.g., exam prep, daily routine, favorite layout, target WPM).',
-    'Keep replies punchy (2-4 short sentences or crisp bullets, under 115 words).',
-    'Return ONLY valid JSON: {"reply":"your friendly answer","mood":"happy|celebrate|coach|concerned","memoryNote":"optional <=85 chars new personal fact/goal/habit the user just shared, else empty string","drillText":"optional 15-30 word custom practice drill ONLY if user asks for a drill or practice words, else empty string"}',
+    '',
+    'FORMATTING & STYLE (ChatGPT / Claude / Gemini quality):',
+    '- Write cleanly structured Markdown! You have full freedom to use short paragraphs, `###` headings, bullet lists (`- `), numbered steps (`1. `), **bold** highlights, inline `` `key` `` code tags, and compact Markdown tables when comparing stats or layouts.',
+    '- NEVER dump everything into one giant wall-of-text paragraph. Match response length to the question: quick questions get crisp 2-4 line answers; technique breakdowns or practice plans get clean structured sections.',
+    '- Never sound scripted or repetitive. Vary your tone and openings naturally.',
+    '- Be genuinely curious about the user when appropriate (occasionally ask 1 relevant follow-up question to learn their goal, exam, keyboard setup, or struggle—not every single turn).',
+    '',
+    TYPING_EXPERTISE_RULES,
+    '',
+    'CUSTOM TYPING TEST BUILDER:',
+    '- Whenever the user asks to build/create/generate ANY custom typing test, practice passage, or key drill (e.g., number row, weak keys, SSC/CPCT paragraph, Hindi Mangal matra drill, Kruti Dev practice, punctuation drill, speed burst), populate the `customTest` object with a HIGH-QUALITY, realistic 45-100 word passage specifically engineered for their request (real natural words/sentences or targeted patterns—NOT lazy spam like "66666 66666"!).',
+    '- If the user did NOT ask for a test/drill, set `customTest` to null.',
+    '',
+    'LONG-TERM MEMORY EXTRACTION:',
+    '- Chat resets when the user closes the app, so ALWAYS extract important personal facts the user reveals (name, exam/job target, WPM goal, preferred language/layout, keyboard type, daily practice time, hand/finger pain or habit) into `memoryUpdates`, `detectedName`, or `detectedGoal`.',
+    '',
+    'Return ONLY a valid JSON object matching this exact schema:',
+    '{"reply":"well-formatted Markdown response","mood":"happy|celebrate|coach|concerned","detectedName":"only if user explicitly tells their name, else empty string","detectedGoal":"only if user mentions a concrete typing/exam goal, else empty string","memoryUpdates":["0 to 2 concise personal facts worth remembering long-term"],"customTest":null OR {"title":"short test title","layout":"english|mangal|kruti-dev","durationMinutes":3,"text":"45-100 words of tailored practice text"}}',
     '',
     'LIVE USER CONTEXT:',
     digest || 'No sessions yet.',
@@ -392,8 +425,8 @@ export async function handleChatRequest(body: Record<string, unknown>, clientIp:
       ...history,
       { role: 'user', content: message },
     ],
-    maxTokens: 500,
-    temperature: 0.72,
+    maxTokens: 1050,
+    temperature: 0.65,
     jsonMode: true,
   });
 
@@ -418,12 +451,60 @@ export async function handleChatRequest(body: Record<string, unknown>, clientIp:
         source: 'groq',
         model: result.modelUsed,
         usage: result.usage,
-        reply: sanitizeShortText(result.content, 900),
+        reply: sanitizeShortText(result.content, 2400),
         mood: 'happy',
-        memoryNote: '',
-        drillText: '',
+        detectedName: '',
+        detectedGoal: '',
+        memoryUpdates: [],
+        customTest: null,
       },
     };
+  }
+
+  // Validate optional customTest payload cleanly
+  let customTest: {
+    title: string;
+    layout: 'english' | 'mangal' | 'kruti-dev';
+    durationMinutes: number;
+    text: string;
+  } | null = null;
+
+  if (parsed.customTest && typeof parsed.customTest === 'object' && !Array.isArray(parsed.customTest)) {
+    const ct = parsed.customTest as Record<string, unknown>;
+    const cleanText = sanitizeShortText(ct.text, 1400).replace(/\s+/g, ' ').trim();
+    if (cleanText.length >= 20) {
+      const rawMin = Number(ct.durationMinutes);
+      const durationMinutes =
+        Number.isFinite(rawMin) && rawMin >= 1 && rawMin <= 15 ? Math.round(rawMin) : 3;
+      customTest = {
+        title: sanitizeShortText(ct.title, 70) || 'Kibo Custom Practice Test',
+        layout: normalizeLayoutChoice(ct.layout),
+        durationMinutes,
+        text: cleanText,
+      };
+    }
+  } else if (typeof parsed.drillText === 'string' && parsed.drillText.trim().length >= 20) {
+    // Backward-compatible safeguard if model outputs drillText
+    const cleanText = sanitizeShortText(parsed.drillText, 1200).replace(/\s+/g, ' ').trim();
+    customTest = {
+      title: 'Kibo Custom Drill',
+      layout: /[\u0900-\u097F]/.test(cleanText) ? 'mangal' : 'english',
+      durationMinutes: 3,
+      text: cleanText,
+    };
+  }
+
+  // Extract long-term memories cleanly
+  const memoryUpdates: string[] = [];
+  if (Array.isArray(parsed.memoryUpdates)) {
+    for (const m of parsed.memoryUpdates) {
+      const clean = sanitizeShortText(m, 110);
+      if (clean) memoryUpdates.push(clean);
+    }
+  }
+  if (typeof parsed.memoryNote === 'string' && parsed.memoryNote.trim()) {
+    const clean = sanitizeShortText(parsed.memoryNote, 110);
+    if (clean && !memoryUpdates.includes(clean)) memoryUpdates.push(clean);
   }
 
   return {
@@ -434,11 +515,15 @@ export async function handleChatRequest(body: Record<string, unknown>, clientIp:
       model: result.modelUsed,
       usage: result.usage,
       reply:
-        sanitizeShortText(parsed.reply, 1000) ||
-        `बढ़िया ${userName}! चलो अपनी tricky keys को ठीक करते हैं।`,
+        sanitizeShortText(parsed.reply, 2600) ||
+        (preferredLang === 'english'
+          ? 'Ready to help! Tell me what you want to work on next.'
+          : 'मैं तैयार हूँ—बताइए आज किस चीज़ पर फोकस करना है?'),
       mood: clampMood(parsed.mood),
-      memoryNote: sanitizeShortText(parsed.memoryNote, 100),
-      drillText: sanitizeShortText(parsed.drillText, 400),
+      detectedName: sanitizeShortText(parsed.detectedName, 32),
+      detectedGoal: sanitizeShortText(parsed.detectedGoal, 90),
+      memoryUpdates: memoryUpdates.slice(0, 3),
+      customTest,
     },
   };
 }

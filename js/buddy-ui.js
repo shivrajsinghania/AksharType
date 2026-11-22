@@ -1,8 +1,8 @@
 /**
  * AksharType — Kibo AI Buddy UI Controller (Powered by Groq)
- * 1. Performance Tab Coaching Hub (everyday Hindi default, root-cause diagnosis, action plan, 1-click drill)
- * 2. Floating Draggable Live-Animated Robot Avatar (startup time greeting, cute question popup, offline alert)
- * 3. Interactive Friend Chat Drawer (sleek dark UI, zero white scrollbars, evolving memory & custom drills)
+ * 1. Performance Tab Coaching Hub (respectful everyday Hindi default, root-cause diagnosis, 1-click drill)
+ * 2. Cute Full-Body Floating Animated Robot (levitation shadow, waving hands, cheek blushes, cursor eye-tracking)
+ * 3. ChatGPT/Claude-grade Markdown Chat Drawer (ephemeral session history, auto long-term memory, custom test builder)
  */
 
 import {
@@ -16,6 +16,7 @@ import {
   buildLocalFallbackBrief,
   buildLocalFallbackReply,
   buildStartupGreeting,
+  detectTurnLanguage,
   resolveUserFriendlyName,
 } from './buddy-context.js';
 import { LAYOUTS } from './keymaps.js';
@@ -23,126 +24,331 @@ import { LAYOUTS } from './keymaps.js';
 const WIDGET_POS_KEY = 'akshartype_buddy_widget_pos_v1';
 
 /**
- * Create a live-animated SVG robot avatar element (Kibo).
+ * Create a cute, physically present, full-body live-animated SVG robot character (Kibo)
+ * with grounded levitation shadow, floating torso + glowing heart core, articulated waving hands,
+ * rosy cheek blushes, cursor-tracking eyes, and pulsing signal antenna.
  */
 function buildRobotSvgMarkup(idPrefix) {
   return `
-    <svg class="kibo-svg" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <svg class="kibo-svg" viewBox="0 0 80 86" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <defs>
-        <linearGradient id="${idPrefix}-shell" x1="12" y1="12" x2="52" y2="56" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#27272f"/>
-          <stop offset="100%" stop-color="#141418"/>
+        <linearGradient id="${idPrefix}-head" x1="18" y1="14" x2="62" y2="54" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#32323d"/>
+          <stop offset="55%" stop-color="#1d1d24"/>
+          <stop offset="100%" stop-color="#121216"/>
         </linearGradient>
-        <linearGradient id="${idPrefix}-visor" x1="16" y1="22" x2="48" y2="44" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stop-color="#0d1117"/>
-          <stop offset="100%" stop-color="#09090b"/>
+        <linearGradient id="${idPrefix}-torso" x1="26" y1="51" x2="54" y2="73" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#2c2c36"/>
+          <stop offset="100%" stop-color="#141419"/>
         </linearGradient>
+        <linearGradient id="${idPrefix}-visor" x1="22" y1="22" x2="58" y2="44" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stop-color="#0b1017"/>
+          <stop offset="100%" stop-color="#06070a"/>
+        </linearGradient>
+        <radialGradient id="${idPrefix}-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="currentColor" stop-opacity="0.34"/>
+          <stop offset="70%" stop-color="#000000" stop-opacity="0.55"/>
+          <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
+        </radialGradient>
       </defs>
 
-      <!-- Animated Antenna -->
-      <g class="kibo-antenna">
-        <line x1="32" y1="15" x2="32" y2="8" stroke="#52525b" stroke-width="2.2" stroke-linecap="round"/>
-        <circle class="kibo-antenna-tip" cx="32" cy="6.5" r="3.2" fill="currentColor"/>
+      <!-- Grounded Levitation Floor Shadow (scales opposite to float height for physical presence) -->
+      <ellipse class="kibo-shadow" cx="40" cy="80.5" rx="18" ry="3.8" fill="url(#${idPrefix}-shadow)"/>
+
+      <!-- Floating Full-Body Character -->
+      <g class="kibo-body">
+        <!-- Floating Left Hand -->
+        <g class="kibo-hand kibo-hand-l">
+          <rect x="13" y="53" width="8.5" height="12.5" rx="4.25" fill="url(#${idPrefix}-torso)" stroke="#484857" stroke-width="1.2"/>
+          <circle cx="17.25" cy="61.5" r="1.4" fill="currentColor" opacity="0.65"/>
+        </g>
+
+        <!-- Floating Right Hand (waves warmly on happy / hover!) -->
+        <g class="kibo-hand kibo-hand-r">
+          <rect x="58.5" y="53" width="8.5" height="12.5" rx="4.25" fill="url(#${idPrefix}-torso)" stroke="#484857" stroke-width="1.2"/>
+          <circle cx="62.75" cy="61.5" r="1.4" fill="currentColor" opacity="0.65"/>
+        </g>
+
+        <!-- Compact Cute Rounded Torso Pod -->
+        <path
+          d="M27 52.5 C27 50.5 30 49.5 40 49.5 C50 49.5 53 50.5 53 52.5 L51.5 65 C51 70 46.5 72.5 40 72.5 C33.5 72.5 29 70 28.5 65 Z"
+          fill="url(#${idPrefix}-torso)"
+          stroke="#434351"
+          stroke-width="1.3"
+        />
+        <!-- Glowing Chest Core -->
+        <circle class="kibo-core-halo" cx="40" cy="60.5" r="5.5" fill="currentColor" opacity="0.16"/>
+        <circle class="kibo-core" cx="40" cy="60.5" r="2.7" fill="currentColor"/>
+        <circle cx="39.2" cy="59.7" r="0.9" fill="#ffffff" opacity="0.85"/>
+
+        <!-- Animated Signal Antenna -->
+        <g class="kibo-antenna">
+          <line x1="40" y1="16" x2="40" y2="8.5" stroke="#636373" stroke-width="2.2" stroke-linecap="round"/>
+          <circle class="kibo-antenna-ring" cx="40" cy="6.5" r="5.5" stroke="currentColor" stroke-width="1" opacity="0.35"/>
+          <circle class="kibo-antenna-tip" cx="40" cy="6.5" r="3.1" fill="currentColor"/>
+          <circle cx="39.1" cy="5.5" r="0.9" fill="#ffffff" opacity="0.85"/>
+        </g>
+
+        <!-- Cute Rounded Ear Pods -->
+        <rect x="13" y="28" width="5" height="12.5" rx="2.5" fill="#292933" stroke="#454552" stroke-width="1.1"/>
+        <rect x="62" y="28" width="5" height="12.5" rx="2.5" fill="#292933" stroke="#454552" stroke-width="1.1"/>
+
+        <!-- Rounded Chibi Head Shell -->
+        <rect x="17.5" y="15.5" width="45" height="35" rx="15" fill="url(#${idPrefix}-head)" stroke="#484856" stroke-width="1.4"/>
+        <!-- Soft Gloss Highlight -->
+        <path d="M27 17.6 H53" stroke="rgba(255,255,255,0.2)" stroke-width="1.3" stroke-linecap="round"/>
+
+        <!-- Glossy Dark Visor -->
+        <rect x="22.5" y="22" width="35" height="22.5" rx="10" fill="url(#${idPrefix}-visor)" stroke="#27272f" stroke-width="1.1"/>
+
+        <!-- Subtle Cheek Blushes (warm glow when happy/celebrate/hover) -->
+        <g class="kibo-cheeks">
+          <ellipse cx="26.5" cy="37.2" rx="2.6" ry="1.35" fill="#fb7185"/>
+          <ellipse cx="53.5" cy="37.2" rx="2.6" ry="1.35" fill="#fb7185"/>
+        </g>
+
+        <!-- Cursor-Tracking Face Feature Group -->
+        <g class="kibo-eye-track">
+          <!-- Expressive Blinking Eyes -->
+          <g class="kibo-eyes-normal">
+            <rect class="kibo-eye kibo-eye-l" x="28.5" y="27.5" width="6.2" height="7.8" rx="3.1" fill="currentColor"/>
+            <rect class="kibo-eye kibo-eye-r" x="45.3" y="27.5" width="6.2" height="7.8" rx="3.1" fill="currentColor"/>
+            <circle cx="30.4" cy="29.6" r="1.25" fill="#ffffff" opacity="0.92"/>
+            <circle cx="47.2" cy="29.6" r="1.25" fill="#ffffff" opacity="0.92"/>
+            <circle cx="32.7" cy="33" r="0.6" fill="#ffffff" opacity="0.55"/>
+            <circle cx="49.5" cy="33" r="0.6" fill="#ffffff" opacity="0.55"/>
+          </g>
+
+          <!-- Joyful Curved Eyes (Happy / Celebrate / Hover) -->
+          <g class="kibo-eyes-happy">
+            <path d="M27.6 32.8 Q31.6 26.8 35.6 32.8" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" fill="none"/>
+            <path d="M44.4 32.8 Q48.4 26.8 52.4 32.8" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" fill="none"/>
+          </g>
+
+          <!-- Expressive Cute Smile / Voice Equalizer -->
+          <path class="kibo-mouth-smile" d="M36 38.4 Q40 41.6 44 38.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none" opacity="0.9"/>
+          <g class="kibo-voice-bars">
+            <rect class="kibo-bar b1" x="34.5" y="36.8" width="2.1" height="4.2" rx="1.05" fill="currentColor"/>
+            <rect class="kibo-bar b2" x="39" y="35.6" width="2.1" height="6.4" rx="1.05" fill="currentColor"/>
+            <rect class="kibo-bar b3" x="43.5" y="36.8" width="2.1" height="4.2" rx="1.05" fill="currentColor"/>
+          </g>
+        </g>
       </g>
-
-      <!-- Side Ear Pods -->
-      <rect x="6.5" y="27" width="4.5" height="12" rx="2.25" fill="#27272f" stroke="#3f3f46" stroke-width="1"/>
-      <rect x="53" y="27" width="4.5" height="12" rx="2.25" fill="#27272f" stroke="#3f3f46" stroke-width="1"/>
-
-      <!-- Main Robot Head Shell -->
-      <rect x="11" y="15" width="42" height="36" rx="13" fill="url(#${idPrefix}-shell)" stroke="#3f3f46" stroke-width="1.4"/>
-      <path d="M21 16.5 H43" stroke="rgba(255,255,255,0.16)" stroke-width="1.2" stroke-linecap="round"/>
-
-      <!-- Dark Visor Screen -->
-      <rect x="16" y="22" width="32" height="21" rx="8" fill="url(#${idPrefix}-visor)" stroke="#27272a" stroke-width="1"/>
-
-      <!-- Eyes (Normal / Blinking) -->
-      <g class="kibo-eyes-normal">
-        <rect class="kibo-eye kibo-eye-l" x="22" y="28" width="5.5" height="7" rx="2.75" fill="currentColor"/>
-        <rect class="kibo-eye kibo-eye-r" x="36.5" y="28" width="5.5" height="7" rx="2.75" fill="currentColor"/>
-        <circle cx="23.8" cy="30" r="1" fill="#fafafa" opacity="0.85"/>
-        <circle cx="38.3" cy="30" r="1" fill="#fafafa" opacity="0.85"/>
-      </g>
-
-      <!-- Eyes (Happy / Celebrate Curved Arcs) -->
-      <g class="kibo-eyes-happy">
-        <path d="M21 32.5 Q24.75 27.5 28.5 32.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-        <path d="M35.5 32.5 Q39.25 27.5 43 32.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"/>
-      </g>
-
-      <!-- Cute Mouth / Voice Wave -->
-      <path class="kibo-mouth-smile" d="M28.5 38.5 Q32 41 35.5 38.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.85"/>
-      <g class="kibo-voice-bars">
-        <rect class="kibo-bar b1" x="26.5" y="36.5" width="2" height="4" rx="1" fill="currentColor"/>
-        <rect class="kibo-bar b2" x="31" y="35.5" width="2" height="6" rx="1" fill="currentColor"/>
-        <rect class="kibo-bar b3" x="35.5" y="36.5" width="2" height="4" rx="1" fill="currentColor"/>
-      </g>
-
-      <!-- Subtle Chin Badge -->
-      <rect x="27" y="46.5" width="10" height="2" rx="1" fill="#3f3f46"/>
     </svg>
   `;
 }
 
 /**
- * Safely render plain text with lightweight **bold**, `code`, and bullet formatting
- * strictly via DOM nodes & textContent (zero innerHTML XSS risk).
+ * Append inline Markdown tokens (**bold**, *italic*, `code/keycap`) safely using DOM nodes.
+ * Zero innerHTML — completely XSS-safe.
  */
-function renderSafeRichText(container, text) {
+function appendInlineFormatted(parent, text) {
+  const str = String(text || '');
+  const tokenRegex = /(\*\*[^*]+\*\*|`[^`]+`|\*[^*\n]+\*)/g;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tokenRegex.exec(str)) !== null) {
+    if (match.index > lastIndex) {
+      parent.appendChild(document.createTextNode(str.slice(lastIndex, match.index)));
+    }
+    const token = match[0];
+    if (token.startsWith('**') && token.endsWith('**')) {
+      const strong = document.createElement('strong');
+      strong.textContent = token.slice(2, -2);
+      parent.appendChild(strong);
+    } else if (token.startsWith('`') && token.endsWith('`')) {
+      const code = document.createElement('code');
+      code.className = 'chat-inline-code';
+      code.textContent = token.slice(1, -1);
+      parent.appendChild(code);
+    } else if (token.startsWith('*') && token.endsWith('*')) {
+      const em = document.createElement('em');
+      em.textContent = token.slice(1, -1);
+      parent.appendChild(em);
+    }
+    lastIndex = tokenRegex.lastIndex;
+  }
+
+  if (lastIndex < str.length) {
+    parent.appendChild(document.createTextNode(str.slice(lastIndex)));
+  }
+}
+
+function parseTableCells(line) {
+  let clean = line.trim();
+  if (clean.startsWith('|')) clean = clean.slice(1);
+  if (clean.endsWith('|')) clean = clean.slice(0, -1);
+  return clean.split('|').map((c) => c.trim());
+}
+
+function isTableSeparatorLine(line) {
+  const trimmed = line.trim();
+  return /^\|?(\s*:?-{2,}:?\s*\|)+\s*:?-{2,}:?\s*\|?$/.test(trimmed);
+}
+
+/**
+ * ChatGPT / Claude / Gemini-grade XSS-safe Markdown DOM renderer.
+ * Supports headings (###/##/#), paragraphs, bullet lists, numbered lists,
+ * Markdown tables, fenced code blocks, dividers (---), bold, italic, and inline keycaps.
+ */
+function renderSafeMarkdown(container, markdown) {
   container.textContent = '';
-  const lines = String(text || '').split('\n');
+  const lines = String(markdown || '').replace(/\r\n/g, '\n').split('\n');
+  let i = 0;
 
-  lines.forEach((rawLine, lineIdx) => {
+  while (i < lines.length) {
+    const rawLine = lines[i];
     const trimmed = rawLine.trim();
+
     if (!trimmed) {
-      if (lineIdx > 0 && lineIdx < lines.length - 1) {
-        const spacer = document.createElement('div');
-        spacer.className = 'chat-line-gap';
-        container.appendChild(spacer);
+      i += 1;
+      continue;
+    }
+
+    // 1. Fenced code block
+    if (trimmed.startsWith('```')) {
+      const codeLines = [];
+      i += 1;
+      while (i < lines.length && !lines[i].trim().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i += 1;
       }
-      return;
+      if (i < lines.length) i += 1;
+      const pre = document.createElement('pre');
+      pre.className = 'md-code-block';
+      const code = document.createElement('code');
+      code.textContent = codeLines.join('\n');
+      pre.appendChild(code);
+      container.appendChild(pre);
+      continue;
     }
 
-    const isBullet = /^([•\-*])\s+/.test(trimmed);
-    const lineEl = document.createElement('div');
-    lineEl.className = isBullet ? 'chat-bullet-line' : 'chat-text-line';
-    const contentText = isBullet ? trimmed.replace(/^([•\-*])\s+/, '') : trimmed;
-
-    if (isBullet) {
-      const marker = document.createElement('span');
-      marker.className = 'chat-bullet-dot';
-      marker.textContent = '•';
-      lineEl.appendChild(marker);
+    // 2. Horizontal rule
+    if (/^(-{3,}|\*{3,}|_{3,})$/.test(trimmed)) {
+      const hr = document.createElement('hr');
+      hr.className = 'md-hr';
+      container.appendChild(hr);
+      i += 1;
+      continue;
     }
 
-    const bodySpan = document.createElement('span');
-    const tokenRegex = /(\*\*[^*]+\*\*|`[^`]+`)/g;
-    let lastIndex = 0;
-    let match;
-    while ((match = tokenRegex.exec(contentText)) !== null) {
-      if (match.index > lastIndex) {
-        bodySpan.appendChild(document.createTextNode(contentText.slice(lastIndex, match.index)));
+    // 3. Heading (#, ##, ###, ####)
+    const headingMatch = trimmed.match(/^(#{1,4})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      const h = document.createElement('div');
+      h.className = `md-h md-h${Math.min(level, 3)}`;
+      appendInlineFormatted(h, headingMatch[2]);
+      container.appendChild(h);
+      i += 1;
+      continue;
+    }
+
+    // 4. Markdown table
+    if (
+      trimmed.includes('|') &&
+      i + 1 < lines.length &&
+      isTableSeparatorLine(lines[i + 1])
+    ) {
+      const headers = parseTableCells(trimmed);
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].trim().includes('|') && lines[i].trim() !== '') {
+        rows.push(parseTableCells(lines[i]));
+        i += 1;
       }
-      const token = match[0];
-      if (token.startsWith('**') && token.endsWith('**')) {
-        const strong = document.createElement('strong');
-        strong.textContent = token.slice(2, -2);
-        bodySpan.appendChild(strong);
-      } else if (token.startsWith('`') && token.endsWith('`')) {
-        const code = document.createElement('code');
-        code.className = 'chat-inline-code';
-        code.textContent = token.slice(1, -1);
-        bodySpan.appendChild(code);
+
+      const wrap = document.createElement('div');
+      wrap.className = 'md-table-wrap';
+      const table = document.createElement('table');
+      table.className = 'md-table';
+
+      const thead = document.createElement('thead');
+      const headRow = document.createElement('tr');
+      for (const cellText of headers) {
+        const th = document.createElement('th');
+        appendInlineFormatted(th, cellText);
+        headRow.appendChild(th);
       }
-      lastIndex = tokenRegex.lastIndex;
-    }
-    if (lastIndex < contentText.length) {
-      bodySpan.appendChild(document.createTextNode(contentText.slice(lastIndex)));
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+
+      if (rows.length > 0) {
+        const tbody = document.createElement('tbody');
+        for (const r of rows) {
+          const tr = document.createElement('tr');
+          for (let c = 0; c < headers.length; c += 1) {
+            const td = document.createElement('td');
+            appendInlineFormatted(td, r[c] || '');
+            tr.appendChild(td);
+          }
+          tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+      }
+
+      wrap.appendChild(table);
+      container.appendChild(wrap);
+      continue;
     }
 
-    lineEl.appendChild(bodySpan);
-    container.appendChild(lineEl);
-  });
+    // 5. Unordered list (-, *, •)
+    if (/^([•\-*])\s+/.test(trimmed)) {
+      const ul = document.createElement('ul');
+      ul.className = 'md-ul';
+      while (i < lines.length && /^([•\-*])\s+/.test(lines[i].trim())) {
+        const itemText = lines[i].trim().replace(/^([•\-*])\s+/, '');
+        const li = document.createElement('li');
+        appendInlineFormatted(li, itemText);
+        ul.appendChild(li);
+        i += 1;
+      }
+      container.appendChild(ul);
+      continue;
+    }
+
+    // 6. Ordered list (1. 2. 3.)
+    if (/^\d+[.)]\s+/.test(trimmed)) {
+      const ol = document.createElement('ol');
+      ol.className = 'md-ol';
+      while (i < lines.length && /^\d+[.)]\s+/.test(lines[i].trim())) {
+        const itemText = lines[i].trim().replace(/^\d+[.)]\s+/, '');
+        const li = document.createElement('li');
+        appendInlineFormatted(li, itemText);
+        ol.appendChild(li);
+        i += 1;
+      }
+      container.appendChild(ol);
+      continue;
+    }
+
+    // 7. Standard paragraph (merge consecutive plain lines)
+    const paraLines = [];
+    while (i < lines.length) {
+      const cur = lines[i].trim();
+      if (
+        !cur ||
+        cur.startsWith('```') ||
+        /^#{1,4}\s+/.test(cur) ||
+        /^([•\-*])\s+/.test(cur) ||
+        /^\d+[.)]\s+/.test(cur) ||
+        /^(-{3,}|\*{3,}|_{3,})$/.test(cur) ||
+        (cur.includes('|') && i + 1 < lines.length && isTableSeparatorLine(lines[i + 1]))
+      ) {
+        break;
+      }
+      paraLines.push(cur);
+      i += 1;
+    }
+    const p = document.createElement('p');
+    p.className = 'md-p';
+    paraLines.forEach((lineStr, idx) => {
+      if (idx > 0) p.appendChild(document.createElement('br'));
+      appendInlineFormatted(p, lineStr);
+    });
+    container.appendChild(p);
+  }
 }
 
 export class BuddyController {
@@ -157,6 +363,11 @@ export class BuddyController {
     this.bubbleTimerId = null;
     this.startupTimerId = null;
     this.activeLayoutFilter = 'all';
+
+    // Ephemeral session chat — wipes automatically when the app closes/reloads!
+    this.chatHistory = [];
+    // Starts in everyday Hindi; immediately matches English whenever user types English
+    this.sessionLang = 'hindi';
 
     this.dom = {
       // Performance Tab Buddy Hub
@@ -218,12 +429,79 @@ export class BuddyController {
 
     this.restoreWidgetPosition();
     this.bindDraggableFab();
+    this.bindRobotPresence();
     this.bindEvents();
     this.bindConnectivityListeners();
     this.checkServerStatus();
     this.setMood('happy');
     this.renderChatView();
     this.scheduleStartupGreeting();
+  }
+
+  /**
+   * Give Kibo physical presence: smooth pointer eye-tracking on the floating robot + hover wave.
+   */
+  bindRobotPresence() {
+    const fabAvatar = this.dom.fabAvatar;
+    const fabBtn = this.dom.fabBtn;
+    if (!fabAvatar || !fabBtn) return;
+
+    const prefersReduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    let rafPending = false;
+    let lastClientX = 0;
+    let lastClientY = 0;
+
+    const updateEyeTrack = () => {
+      rafPending = false;
+      if (document.body.classList.contains('is-typing-active')) return;
+      const rect = fabBtn.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = lastClientX - cx;
+      const dy = lastClientY - cy;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 460) {
+        fabAvatar.style.setProperty('--eye-x', '0px');
+        fabAvatar.style.setProperty('--eye-y', '0px');
+        return;
+      }
+
+      const factor = Math.min(1, dist / 220);
+      const angle = Math.atan2(dy, dx);
+      const ex = (Math.cos(angle) * 2.2 * factor).toFixed(2);
+      const ey = (Math.sin(angle) * 1.5 * factor).toFixed(2);
+      fabAvatar.style.setProperty('--eye-x', `${ex}px`);
+      fabAvatar.style.setProperty('--eye-y', `${ey}px`);
+    };
+
+    window.addEventListener(
+      'pointermove',
+      (e) => {
+        if (e.pointerType !== 'mouse') return;
+        lastClientX = e.clientX;
+        lastClientY = e.clientY;
+        if (!rafPending) {
+          rafPending = true;
+          window.requestAnimationFrame(updateEyeTrack);
+        }
+      },
+      { passive: true }
+    );
+
+    fabBtn.addEventListener('pointerenter', () => {
+      fabAvatar.classList.add('is-hover-wave');
+    });
+
+    fabBtn.addEventListener('pointerleave', () => {
+      fabAvatar.classList.remove('is-hover-wave');
+      fabAvatar.style.setProperty('--eye-x', '0px');
+      fabAvatar.style.setProperty('--eye-y', '0px');
+    });
   }
 
   async checkServerStatus() {
@@ -257,6 +535,12 @@ export class BuddyController {
       }
       el.classList.add(`mood-${applied}`);
     }
+    if (this.dom.fabBtn) {
+      for (const m of valid) {
+        this.dom.fabBtn.classList.remove(`mood-${m}`);
+      }
+      this.dom.fabBtn.classList.add(`mood-${applied}`);
+    }
   }
 
   // ==========================================================================
@@ -267,7 +551,7 @@ export class BuddyController {
     if (this.startupTimerId) window.clearTimeout(this.startupTimerId);
     this.startupTimerId = window.setTimeout(() => {
       if (this.isChatOpen || document.body.classList.contains('is-typing-active')) return;
-      const ctx = buildBuddyContext(this.activeLayoutFilter);
+      const ctx = buildBuddyContext(this.activeLayoutFilter, 'hindi');
       const greet = buildStartupGreeting(ctx);
       this.showPopup({
         title: greet.title,
@@ -309,16 +593,15 @@ export class BuddyController {
 
   bindConnectivityListeners() {
     window.addEventListener('offline', () => {
-      const userName = resolveUserFriendlyName();
       this.serverStatus = { configured: false, model: 'offline' };
       this.showPopup({
-        title: `अरे ${userName}, इंटरनेट बंद है क्या?`,
-        text: 'तुमने internet बंद किया है क्या, या WiFi connect नहीं है? कोई बात नहीं—typing प्रैक्टिस offline भी मस्त चलेगी!',
+        title: 'इंटरनेट बंद है क्या?',
+        text: 'लगता है internet बंद है या WiFi connect नहीं है। कोई बात नहीं—typing प्रैक्टिस offline भी बिल्कुल स्मूद चलेगी!',
         mood: 'concerned',
         durationMs: 12000,
         actions: [
           {
-            label: 'समझ गया, टाइप करते हैं',
+            label: 'ठीक है, प्रैक्टिस करते हैं',
             primary: true,
             onClick: () => this.hideBubble(),
           },
@@ -330,13 +613,13 @@ export class BuddyController {
       const userName = resolveUserFriendlyName();
       this.checkServerStatus();
       this.showPopup({
-        title: `नेट वापस आ गया ${userName}!`,
-        text: 'अब Kibo फिर से फुल पावर में है—चलो बात करें या एक नया टेस्ट मारें!',
+        title: userName === 'दोस्त' ? 'इंटरनेट वापस आ गया!' : `नेट वापस आ गया, ${userName}!`,
+        text: 'Kibo फिर से लाइव AI मोड में तैयार है—आइए बात करें या नया custom टेस्ट बनाएँ।',
         mood: 'celebrate',
         durationMs: 8000,
         actions: [
           {
-            label: 'Kibo से Chat करो',
+            label: 'Kibo से Chat करें',
             primary: true,
             onClick: () => this.openChat(),
           },
@@ -365,7 +648,7 @@ export class BuddyController {
   }
 
   clampWidgetCoords(x, y) {
-    const btnSize = 58;
+    const btnSize = 68;
     const margin = 14;
     const maxX = Math.max(margin, window.innerWidth - btnSize - margin);
     const maxY = Math.max(margin, window.innerHeight - btnSize - margin);
@@ -386,7 +669,7 @@ export class BuddyController {
     root.dataset.customPos = '1';
 
     root.classList.toggle('bubble-on-right', clamped.x < window.innerWidth * 0.42);
-    root.classList.toggle('bubble-below', clamped.y < 190);
+    root.classList.toggle('bubble-below', clamped.y < 200);
 
     if (persist) {
       try {
@@ -535,7 +818,7 @@ export class BuddyController {
     if (!this.dom.perfCard) return;
     this.activeLayoutFilter = layoutFilter;
 
-    const ctx = buildBuddyContext(layoutFilter);
+    const ctx = buildBuddyContext(layoutFilter, this.sessionLang);
     const buddy = loadBuddyState();
 
     if (this.dom.perfNameInput) {
@@ -610,8 +893,8 @@ export class BuddyController {
     if (this.dom.perfHeadline) {
       this.dom.perfHeadline.textContent =
         language === 'english'
-          ? `Checking your latest runs, ${userName}...`
-          : `रुको ${userName}, तुम्हारे पिछले टेस्ट देख रहा हूँ...`;
+          ? `Analyzing your latest sessions, ${userName}...`
+          : `${userName}, आपके पिछले टेस्ट का विश्लेषण हो रहा है...`;
     }
     if (this.dom.perfMeta) {
       this.dom.perfMeta.textContent = 'Kibo AI Coach · Weak keys और speed pattern स्कैन हो रहे हैं';
@@ -620,7 +903,7 @@ export class BuddyController {
       this.dom.perfWhyText.textContent =
         language === 'english'
           ? 'Scanning mistake patterns and finger transitions...'
-          : 'तुम्हारी गलतियों और उंगलियों के rhythm का हिसाब लगा रहा हूँ...';
+          : 'आपकी गलतियों और उंगलियों के rhythm का विश्लेषण चल रहा है...';
       this.dom.perfWhyText.classList.add('is-loading-shimmer');
     }
     if (this.dom.perfActionsList) {
@@ -642,7 +925,7 @@ export class BuddyController {
     this.setMood(brief.mood || 'coach');
 
     if (this.dom.perfHeadline) {
-      this.dom.perfHeadline.textContent = brief.headline || `हे ${ctx.userName}!`;
+      this.dom.perfHeadline.textContent = brief.headline || `${ctx.userName}, आइए प्रैक्टिस को बेहतर बनाएँ।`;
     }
 
     if (this.dom.perfMeta) {
@@ -703,7 +986,7 @@ export class BuddyController {
             .slice(0, 3)
             .map((w) => w.displayChar)
             .join(' ')})`
-        : 'Recommended Practice शुरू करो';
+        : 'Recommended Practice शुरू करें';
       this.dom.perfDrillBtn.dataset.drillLayout = ctx.effectiveLayout;
     }
 
@@ -720,29 +1003,29 @@ export class BuddyController {
             {
               label: 'Why do I miss these keys?',
               prompt:
-                'Break down exactly why I keep missing my top weak keys and how to fix my finger movement.',
+                'Break down exactly why I keep missing my top weak keys and which exact finger should press each one.',
             },
             {
-              label: 'Make a custom drill',
-              prompt: `Create a short custom practice drill targeting my weak keys in ${ctx.effectiveLayout}.`,
+              label: 'Build a custom test',
+              prompt: `Build a custom 3-minute practice test targeting my weak keys in ${ctx.effectiveLayout}.`,
             },
             {
               label: 'Review my last run',
-              prompt: 'Give me an honest friend-style review of my most recent typing session.',
+              prompt: 'Give me a structured review of my most recent typing session and what to fix next.',
             },
           ]
         : [
             {
               label: 'ये keys क्यों गलत हो रही हैं?',
-              prompt: 'मेरी top weak keys बार-बार गलत क्यों हो रही हैं? इन्हें ठीक करने का आसान तरीका बताओ।',
+              prompt: 'मेरी top weak keys बार-बार गलत क्यों हो रही हैं? सही उंगली और सुधारने का तरीका बताओ।',
             },
             {
-              label: 'Custom Drill बनाओ',
-              prompt: `${ctx.effectiveLayout} में मेरी weak keys के लिए एक छोटा सा custom practice drill बना दो।`,
+              label: 'Custom Test बनाओ',
+              prompt: `${ctx.effectiveLayout} में मेरी weak keys के लिए एक 3-minute custom practice test बना दो।`,
             },
             {
               label: 'पिछले टेस्ट का Review',
-              prompt: 'मेरे सबसे पिछले टेस्ट का दोस्त की तरह honest review करो—क्या अच्छा रहा और कहाँ सुधारना है?',
+              prompt: 'मेरे सबसे पिछले टेस्ट का पूरा structured review दो—क्या अच्छा रहा और कहाँ सुधारना है?',
             },
           ];
 
@@ -759,7 +1042,7 @@ export class BuddyController {
   }
 
   // ==========================================================================
-  // Interactive Friend Chat Drawer & Evolving Memory
+  // Interactive Chat Drawer (Ephemeral Session + Persistent Long-Term Memory)
   // ==========================================================================
 
   openChat(prefillAndSend = null) {
@@ -806,9 +1089,7 @@ export class BuddyController {
 
   renderChatView() {
     if (!this.dom.chatMessages) return;
-    const ctx = buildBuddyContext(this.activeLayoutFilter);
-    const buddy = loadBuddyState();
-    const history = buddy.chatHistory || [];
+    const ctx = buildBuddyContext(this.activeLayoutFilter, this.sessionLang);
 
     if (this.dom.chatSubtitle) {
       if (!navigator.onLine) {
@@ -819,26 +1100,47 @@ export class BuddyController {
       }
     }
 
+    if (this.dom.chatInput) {
+      this.dom.chatInput.placeholder =
+        this.sessionLang === 'english'
+          ? 'Ask Kibo about speed, accuracy, or a custom test...'
+          : 'Kibo से पूछें — गलती, स्पीड या custom test...';
+    }
+
     this.dom.chatMessages.textContent = '';
 
-    if (history.length === 0) {
+    if (this.chatHistory.length === 0) {
       const welcome = document.createElement('div');
       welcome.className = 'chat-msg chat-msg-assistant';
       const bubble = document.createElement('div');
       bubble.className = 'chat-bubble';
       let intro;
       if (!navigator.onLine) {
-        intro = `अरे यार ${ctx.userName}, तुमने internet बंद किया है क्या? या WiFi connect नहीं है? 😅\nकोई बात नहीं—typing प्रैक्टिस offline भी मस्त चलेगी, और नेट आते ही हम लाइव बात करेंगे!`;
+        intro = [
+          '### लगता है आप Offline हैं',
+          'क्या आपने internet बंद किया है या WiFi connect नहीं है? कोई बात नहीं—typing प्रैक्टिस offline भी बिल्कुल स्मूद चलेगी, और नेट आते ही हम लाइव बात करेंगे।',
+        ].join('\n');
       } else if (ctx.overall.totalTests > 0) {
-        intro = `अरे ${ctx.userName}! मैं **Kibo** हूँ—तुम्हारा typing दोस्त! अभी तुम्हारे **${ctx.overall.totalTests} टेस्ट** दिख रहे हैं (${ctx.overall.weightedAvgWpm} avg WPM, ${ctx.overall.weightedAccuracy}% accuracy)।\n\nवैसे तुम किसी exam (SSC/CPCT/Court) की तैयारी कर रहे हो या बस मस्त स्पीड बनानी है? बताओ, मिलकर टारगेट तोड़ते हैं!`;
+        intro = [
+          `नमस्ते **${ctx.userName}**! मैं **Kibo** हूँ—आपका AI typing coach।`,
+          '',
+          `अभी तक आपके **${ctx.overall.totalTests} टेस्ट** रिकॉर्ड हैं (**${ctx.overall.weightedAvgWpm} avg WPM**, **${ctx.overall.weightedAccuracy}% accuracy**)। आप मुझसे कुछ भी पूछ सकते हैं—Hindi या English दोनों में:`,
+          '- किसी भी कमज़ोर key की सही उंगली और सुधारने का तरीका',
+          '- WPM और accuracy बढ़ाने की exact तकनीक',
+          '- किसी भी टॉपिक, नंबर-रो या exam (SSC / CPCT / Court) के लिए **Custom Practice Test**',
+        ].join('\n');
       } else {
-        intro = `हे ${ctx.userName}! मैं **Kibo** हूँ—तुम्हारा robotic typing buddy! चलो पहले बताओ तुम्हारा नाम क्या बुलाऊँ और तुम किस goal के लिए typing प्रैक्टिस कर रहे हो?`;
+        intro = [
+          'नमस्ते! मैं **Kibo** हूँ—आपका AI typing mentor।',
+          '',
+          'आप हिंदी या English किसी भी भाषा में बात कर सकते हैं। शुरुआत करने के लिए बताइए—आप किस **goal या exam** के लिए typing सीख रहे हैं, और आपको किस नाम से बुलाऊँ?',
+        ].join('\n');
       }
-      renderSafeRichText(bubble, intro);
+      renderSafeMarkdown(bubble, intro);
       welcome.appendChild(bubble);
       this.dom.chatMessages.appendChild(welcome);
     } else {
-      for (const msg of history) {
+      for (const msg of this.chatHistory) {
         this.appendMessageElement(msg);
       }
     }
@@ -854,24 +1156,73 @@ export class BuddyController {
 
     const bubble = document.createElement('div');
     bubble.className = 'chat-bubble';
-    renderSafeRichText(bubble, msg.content);
+    if (msg.role === 'user') {
+      bubble.textContent = msg.content;
+    } else {
+      renderSafeMarkdown(bubble, msg.content);
+    }
     wrap.appendChild(bubble);
 
-    if (msg.role === 'assistant' && msg.drillText && msg.drillText.length >= 15) {
-      const drillAction = document.createElement('button');
-      drillAction.type = 'button';
-      drillAction.className = 'chat-drill-btn';
-      drillAction.textContent = 'ये Drill अभी Practice करो';
-      drillAction.addEventListener('click', () => {
+    // Rich Custom Practice Test Card
+    if (msg.role === 'assistant' && msg.customTest && msg.customTest.text) {
+      const ct = msg.customTest;
+      const card = document.createElement('div');
+      card.className = 'chat-custom-test-card';
+
+      const head = document.createElement('div');
+      head.className = 'ct-card-head';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'ct-card-title';
+      titleEl.textContent = ct.title || 'Kibo Custom Practice Test';
+
+      const layoutMeta = (LAYOUTS[ct.layout] || LAYOUTS.english).shortName;
+      const wordCount = ct.text.split(/\s+/).filter(Boolean).length;
+      const metaEl = document.createElement('div');
+      metaEl.className = 'ct-card-meta tabular-nums';
+      metaEl.textContent = `${layoutMeta} · ${wordCount} words · ${ct.durationMinutes || 3} min`;
+
+      head.appendChild(titleEl);
+      head.appendChild(metaEl);
+
+      const previewEl = document.createElement('p');
+      previewEl.className = 'ct-card-preview';
+      previewEl.textContent = ct.text;
+
+      const launchBtn = document.createElement('button');
+      launchBtn.type = 'button';
+      launchBtn.className = 'chat-drill-btn';
+      launchBtn.textContent =
+        this.sessionLang === 'english' ? 'Start Practice Test' : 'ये Practice Test शुरू करें';
+      launchBtn.addEventListener('click', () => {
         if (typeof this.callbacks.onLaunchCustomDrill === 'function') {
           this.closeChat();
           this.callbacks.onLaunchCustomDrill({
-            title: 'Kibo Custom Drill',
-            text: msg.drillText,
+            title: ct.title,
+            text: ct.text,
+            layout: ct.layout,
+            durationMinutes: ct.durationMinutes,
           });
         }
       });
-      wrap.appendChild(drillAction);
+
+      card.appendChild(head);
+      card.appendChild(previewEl);
+      card.appendChild(launchBtn);
+      wrap.appendChild(card);
+    }
+
+    // Subtle confirmation note when new long-term personal memory was stored
+    if (
+      msg.role === 'assistant' &&
+      Array.isArray(msg.savedMemories) &&
+      msg.savedMemories.length > 0
+    ) {
+      const memNote = document.createElement('div');
+      memNote.className = 'chat-memory-note';
+      const prefix = this.sessionLang === 'english' ? 'Saved to memory:' : 'Long-term memory में सेव:';
+      memNote.textContent = `${prefix} ${msg.savedMemories.join(' · ')}`;
+      wrap.appendChild(memNote);
     }
 
     this.dom.chatMessages.appendChild(wrap);
@@ -882,22 +1233,22 @@ export class BuddyController {
     this.dom.chatQuickRow.textContent = '';
 
     const suggestions = [];
-    if (ctx.language === 'english') {
+    if (this.sessionLang === 'english') {
       if (ctx.patterns.weakest.length > 0) {
         suggestions.push(`Why do I miss "${ctx.patterns.weakest[0].displayChar}"?`);
       } else {
-        suggestions.push('How to boost speed?');
+        suggestions.push('How do I boost WPM & accuracy?');
       }
-      suggestions.push('20-word custom drill');
-      suggestions.push('Review my last run');
+      suggestions.push('Build a custom weak-keys test');
+      suggestions.push('Review my last test');
     } else {
       if (ctx.patterns.weakest.length > 0) {
         suggestions.push(`"${ctx.patterns.weakest[0].displayChar}" गलत क्यों होता है?`);
       } else {
-        suggestions.push('स्पीड कैसे बढ़ाऊँ?');
+        suggestions.push('स्पीड और accuracy कैसे बढ़ाएँ?');
       }
-      suggestions.push('Custom drill बनाओ');
-      suggestions.push(ctx.patterns.isHindi ? 'Hindi मात्रा टिप्स' : 'पिछला टेस्ट बताओ');
+      suggestions.push('Custom practice test बनाओ');
+      suggestions.push(ctx.patterns.isHindi ? 'Hindi मात्रा टिप्स' : 'पिछले टेस्ट का review');
     }
 
     for (const q of suggestions) {
@@ -927,7 +1278,7 @@ export class BuddyController {
         const empty = document.createElement('div');
         empty.className = 'mem-empty';
         empty.textContent =
-          'अभी तक कोई note save नहीं है। Kibo से अपने exam, WPM target या habit के बारे में बात करो—ये अपने आप याद रख लेगा!';
+          'Chat बंद होते ही conversation हट जाती है, लेकिन आपके बारे में ज़रूरी बातें (नाम, exam, target WPM, keyboard) यहाँ हमेशा के लिए सेव रहती हैं।';
         this.dom.memoryList.appendChild(empty);
       } else {
         buddy.memories.forEach((item, idx) => {
@@ -945,7 +1296,6 @@ export class BuddyController {
             const next = current.filter((_, i) => i !== idx);
             saveBuddyState({ memories: next });
             this.renderMemoryPanel();
-            this.renderChatView();
           });
           row.appendChild(textSpan);
           row.appendChild(delBtn);
@@ -961,6 +1311,38 @@ export class BuddyController {
     }
   }
 
+  /**
+   * Persist extracted personal facts (name, goal, memories[]) into permanent long-term memory.
+   * Returns a list of human-readable labels for facts newly stored on this turn.
+   */
+  applyLongTermMemoryUpdates({ detectedName, detectedGoal, memoryUpdates }) {
+    const saved = [];
+    const current = loadBuddyState();
+
+    const cleanName = String(detectedName || '').trim().slice(0, 32);
+    if (cleanName && cleanName.toLowerCase() !== (current.preferredName || '').toLowerCase()) {
+      saveBuddyState({ preferredName: cleanName, cachedFingerprint: '' });
+      saved.push(`Name: ${cleanName}`);
+    }
+
+    const cleanGoal = String(detectedGoal || '').trim().slice(0, 90);
+    if (cleanGoal && cleanGoal.toLowerCase() !== (current.goal || '').toLowerCase()) {
+      saveBuddyState({ goal: cleanGoal, cachedFingerprint: '' });
+      saved.push(`Goal: ${cleanGoal}`);
+    }
+
+    if (Array.isArray(memoryUpdates)) {
+      for (const note of memoryUpdates) {
+        const res = appendBuddyMemory(note);
+        if (res && res.added) {
+          saved.push(String(note).trim());
+        }
+      }
+    }
+
+    return saved;
+  }
+
   async sendChatMessage(rawText) {
     const text = String(rawText || '').trim().slice(0, 500);
     if (!text || this.isChatLoading) return;
@@ -969,10 +1351,11 @@ export class BuddyController {
     if (this.dom.chatInput) this.dom.chatInput.value = '';
     if (this.dom.chatSendBtn) this.dom.chatSendBtn.disabled = true;
 
-    const buddy = loadBuddyState();
-    const updatedHistory = [...(buddy.chatHistory || []), { role: 'user', content: text }].slice(-30);
-    saveBuddyState({ chatHistory: updatedHistory });
+    // Instant language match on this exact message!
+    this.sessionLang = detectTurnLanguage(text, this.sessionLang);
 
+    // Push into ephemeral RAM chat history (clears when app closes)
+    this.chatHistory = [...this.chatHistory, { role: 'user', content: text }].slice(-30);
     this.renderChatView();
 
     this.setMood('thinking');
@@ -983,22 +1366,23 @@ export class BuddyController {
     this.dom.chatMessages?.appendChild(typingEl);
     this.scrollChatToBottom();
 
-    // Context now includes updated chatHistory so language detection reflects this message!
-    const ctx = buildBuddyContext(this.activeLayoutFilter);
+    const ctx = buildBuddyContext(this.activeLayoutFilter, this.sessionLang);
 
-    const priorTurns = updatedHistory.slice(0, -1).slice(-6).map((m) => ({
+    const priorTurns = this.chatHistory.slice(0, -1).slice(-8).map((m) => ({
       role: m.role,
       content: m.content,
     }));
 
     let assistantReply = '';
     let replyMood = 'happy';
-    let drillText = '';
+    let customTest = null;
+    let savedMemories = [];
 
     if (!navigator.onLine) {
       const fb = buildLocalFallbackReply(text, ctx, 'OFFLINE');
       assistantReply = fb.reply;
       replyMood = fb.mood;
+      customTest = fb.customTest || null;
     } else {
       try {
         const resp = await fetch('/api/buddy/chat', {
@@ -1007,7 +1391,7 @@ export class BuddyController {
           body: JSON.stringify({
             message: text,
             userName: ctx.userName,
-            language: ctx.language,
+            language: this.sessionLang,
             digest: ctx.digest,
             history: priorTurns,
           }),
@@ -1017,30 +1401,37 @@ export class BuddyController {
         if (resp.ok && data?.ok && data.reply) {
           assistantReply = data.reply;
           replyMood = data.mood || 'happy';
-          drillText = data.drillText || '';
-          if (data.memoryNote) {
-            appendBuddyMemory(data.memoryNote);
-          }
+          customTest = data.customTest || null;
+          savedMemories = this.applyLongTermMemoryUpdates({
+            detectedName: data.detectedName,
+            detectedGoal: data.detectedGoal,
+            memoryUpdates: data.memoryUpdates,
+          });
         } else {
           const fb = buildLocalFallbackReply(text, ctx, data?.code || 'UPSTREAM_ERROR');
           assistantReply = fb.reply;
           replyMood = fb.mood;
+          customTest = fb.customTest || null;
         }
       } catch {
         const fb = buildLocalFallbackReply(text, ctx, 'OFFLINE');
         assistantReply = fb.reply;
         replyMood = fb.mood;
+        customTest = fb.customTest || null;
       }
     }
 
     typingEl.remove();
 
-    const finalBuddy = loadBuddyState();
-    const nextHistory = [
-      ...(finalBuddy.chatHistory || []),
-      { role: 'assistant', content: assistantReply, drillText: drillText || undefined },
+    this.chatHistory = [
+      ...this.chatHistory,
+      {
+        role: 'assistant',
+        content: assistantReply,
+        customTest: customTest || undefined,
+        savedMemories: savedMemories.length > 0 ? savedMemories : undefined,
+      },
     ].slice(-30);
-    saveBuddyState({ chatHistory: nextHistory });
 
     this.isChatLoading = false;
     if (this.dom.chatSendBtn) this.dom.chatSendBtn.disabled = false;
@@ -1066,27 +1457,27 @@ export class BuddyController {
     if (summary.isNewPB && summary.netWpm > 0) {
       this.showPopup({
         title: `नया Personal Best, ${userName}!`,
-        text: `कमाल कर दिया यार! ${summary.netWpm} WPM और ${summary.accuracy}% accuracy—आओ जश्न मनाएँ!`,
+        text: `बेहतरीन प्रदर्शन — ${summary.netWpm} WPM और ${summary.accuracy}% accuracy। आइए इसका breakdown देखें।`,
         mood: 'celebrate',
         durationMs: 10000,
         actions: [
           {
-            label: 'Kibo से मिलो',
+            label: 'Review देखें',
             primary: true,
             onClick: () =>
-              this.openChat('मेरा अभी नया PB आया है! मेरे इस टेस्ट का review करो और अगला टारगेट बताओ!'),
+              this.openChat('मेरा अभी नया PB आया है! मेरे इस टेस्ट का review दो और अगला टारगेट बताओ।'),
           },
         ],
       });
     } else if (summary.accuracy >= 97 && summary.totalChars >= 20) {
       this.showPopup({
-        title: `एकदम साफ ${summary.accuracy}% Accuracy!`,
-        text: `बढ़िया कंट्रोल है ${userName}! अब अगले टेस्ट में स्पीड थोड़ी और बढ़ाएँ क्या?`,
+        title: `शानदार ${summary.accuracy}% Accuracy!`,
+        text: `कंट्रोल बहुत साफ रहा, ${userName}। अगले टेस्ट में स्पीड बढ़ाने की तकनीक जाननी है?`,
         mood: 'happy',
         durationMs: 8500,
         actions: [
           {
-            label: 'अगली टिप लो',
+            label: 'स्पीड टिप्स लें',
             primary: true,
             onClick: () => this.openChat('मेरी accuracy बढ़िया रही, अब speed कैसे बढ़ाऊँ?'),
           },
@@ -1094,30 +1485,30 @@ export class BuddyController {
       });
     } else if (summary.errorChars >= 6) {
       this.showPopup({
-        title: `थोड़ा tough रहा ${userName} (${summary.errorChars} गलतियाँ)`,
-        text: 'टेंशन मत लो! मैंने देख लिया कौन सी keys गड़बड़ हुईं—आओ chat में बताता हूँ कैसे ठीक करनी हैं।',
+        title: `इस टेस्ट में ${summary.errorChars} गलतियाँ हुईं`,
+        text: 'कोई बात नहीं—मैंने पकड़ लिया कौन सी keys चूक रहीं हैं। आइए तुरंत एक targeted drill बनाएँ।',
         mood: 'concerned',
         durationMs: 9500,
         actions: [
           {
-            label: 'बताओ क्या गलत हुआ',
+            label: 'गलतियाँ ठीक करें',
             primary: true,
             onClick: () =>
-              this.openChat('इस टेस्ट में मुझसे गलतियाँ क्यों हुईं और इन्हें कैसे सुधारूँ?'),
+              this.openChat('इस टेस्ट में मुझसे गलतियाँ क्यों हुईं और इन्हें सुधारने के लिए एक custom drill दो।'),
           },
         ],
       });
     } else {
       this.showPopup({
-        title: `बढ़िया टेस्ट ${userName} — ${summary.netWpm} WPM!`,
-        text: 'एक quick breakdown चाहिए या अगला drill शुरू करें?',
+        title: `टेस्ट पूरा हुआ — ${summary.netWpm} WPM`,
+        text: 'क्या आप इस सेशन का quick review या एक custom practice test चाहेंगे?',
         mood: 'coach',
         durationMs: 8000,
         actions: [
           {
-            label: 'Quick Review दो',
+            label: 'Quick Review',
             primary: true,
-            onClick: () => this.openChat('मेरे इस टेस्ट का quick review दो!'),
+            onClick: () => this.openChat('मेरे इस टेस्ट का quick structured review दो।'),
           },
         ],
       });
@@ -1125,6 +1516,8 @@ export class BuddyController {
   }
 
   onVaultChanged() {
+    this.chatHistory = [];
+    this.sessionLang = 'hindi';
     this.renderChatView();
     this.renderMemoryPanel();
     this.setMood('happy');
@@ -1178,7 +1571,7 @@ export class BuddyController {
     });
 
     this.dom.resAskBuddyBtn?.addEventListener('click', () => {
-      this.openChat('मेरा टेस्ट अभी खत्म हुआ! दोस्त की तरह बताओ क्या अच्छा रहा और गलतियाँ क्यों हुईं?');
+      this.openChat('मेरा टेस्ट अभी खत्म हुआ। कृपया structured review दो—क्या अच्छा रहा और गलतियाँ क्यों हुईं?');
     });
 
     this.dom.chatCloseBtn?.addEventListener('click', () => this.closeChat());
@@ -1202,11 +1595,11 @@ export class BuddyController {
     this.dom.memoryClearBtn?.addEventListener('click', () => {
       clearBuddyMemories();
       this.renderMemoryPanel();
-      this.renderChatView();
     });
 
     this.dom.chatClearBtn?.addEventListener('click', () => {
-      saveBuddyState({ chatHistory: [] });
+      this.chatHistory = [];
+      this.sessionLang = 'hindi';
       this.renderChatView();
     });
 
